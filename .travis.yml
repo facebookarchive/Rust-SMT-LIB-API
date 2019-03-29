@@ -1,0 +1,37 @@
+os:
+- linux
+sudo: required
+dist: xenial
+addons:
+  apt:
+    packages:
+    - libssl-dev
+    - libz3-dev
+language: rust
+rust:
+- nightly
+cache: cargo
+
+before_script:
+# install formatter
+- rustup component add rustfmt-preview
+# install linter
+#- rustup component add clippy-preview
+# install code coverage tool
+- RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install --force cargo-tarpaulin || true
+
+script:
+# Exit immediately if a command exits with a non-zero status.
+- set -e
+# Run format checks
+- cargo fmt --all -- --check
+# Run lint checks
+#- cargo clippy -- -D warnings
+# Build
+- cargo build
+# Run unit and integration tests
+- RUST_BACKTRACE=1 cargo test
+# Run code coverage tests
+- cargo clean -p rust_smt
+- cargo tarpaulin --ignore-tests -v --out Xml || true
+- bash <(curl -s https://codecov.io/bash)
