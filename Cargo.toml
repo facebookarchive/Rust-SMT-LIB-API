@@ -4,11 +4,13 @@ version = "0.1.0"
 authors = ["Clark Barrett <cbarrett@fb.com>"]
 edition = "2018"
 description = "A generic solver-agnostic API for interacting with SMT solvers based on the SMT-LIB standard."
-repository = "https://github.com/facebookincubator/Rust-SMT-LIB-API"
+homepage = "https://github.com/facebookincubator/Rust-SMT-LIB-API"
+repository = "https://github.com/facebookincubator/Rust-SMT-LIB-API.git"
 readme = "README.md"
 keywords = ["smt", "satisfiability", "modulo", "theories", "z3"]
 categories = ["api-bindings", "science"]
 license = "MIT"
+exclude = [".gitignore", ".travis.yml"]
 
 [badges]
 travis-ci = { repository = "facebookincubator/Rust-SMT-LIB-API", branch = "master" }
