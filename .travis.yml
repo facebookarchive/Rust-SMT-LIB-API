@@ -9,14 +9,14 @@ addons:
     - libz3-dev
 language: rust
 rust:
-- nightly
+- nightly-2019-03-23
 cache: cargo
 
 before_script:
 # install formatter
 - rustup component add rustfmt-preview
 # install linter
-#- rustup component add clippy-preview
+- rustup component add clippy-preview
 # install code coverage tool
 - RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install --force cargo-tarpaulin || true
 
@@ -26,7 +26,7 @@ script:
 # Run format checks
 - cargo fmt --all -- --check
 # Run lint checks
-#- cargo clippy -- -D warnings
+- cargo clippy -- -D warnings
 # Build
 - cargo build
 # Run unit and integration tests
