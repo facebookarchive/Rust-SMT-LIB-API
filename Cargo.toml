@@ -1,6 +1,6 @@
 [package]
 name = "rust_smt"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Clark Barrett <cbarrett@fb.com>"]
 edition = "2018"
 description = "A generic solver-agnostic API for interacting with SMT solvers based on the SMT-LIB standard."
@@ -13,8 +13,6 @@ license = "MIT"
 exclude = [".gitignore", ".travis.yml"]
 
 [badges]
-travis-ci = { repository = "facebookincubator/Rust-SMT-LIB-API", branch = "master" }
-codecov = { repository = "facebookincubator/Rust-SMT-LIB-API", branch = "master", service = "github" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
