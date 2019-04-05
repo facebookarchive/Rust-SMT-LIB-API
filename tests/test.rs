@@ -1017,3 +1017,16 @@ fn test_get_value_after_unsat_error() {
         )
     );
 }
+
+#[test]
+fn test_push_pop_get_model() {
+    let mut smt = new_smt_solver("z3");
+    let x = smt
+        .declare_const("x", &smt.lookup_sort(Sorts::Int).unwrap())
+        .unwrap();
+    smt.push(1).unwrap();
+    let smt_result = smt.check_sat();
+    assert_eq!(smt_result, CheckSatResult::Sat);
+    let _value = smt.get_value(&x).unwrap();
+    smt.pop(1).unwrap();
+}

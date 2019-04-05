@@ -172,6 +172,7 @@ impl Drop for Z3SMTSolver {
             if let Some(m) = self.model {
                 Z3_model_dec_ref(self.context, m);
             }
+            Z3_solver_dec_ref(self.context, self.solver);
             Z3_del_context(self.context);
             Z3_del_config(self.config);
         }
@@ -187,10 +188,12 @@ impl SMTSolver for Z3SMTSolver {
             mutex!();
             let cfg = Z3_mk_config();
             let cxt = Z3_mk_context(cfg);
+            let s = Z3_mk_simple_solver(cxt);
+            Z3_solver_inc_ref(cxt, s);
             Z3SMTSolver {
                 config: cfg,
                 context: cxt,
-                solver: Z3_mk_simple_solver(cxt),
+                solver: s,
                 level: 0,
                 model: None,
                 last_result: CheckSatResult::Unknown,
@@ -581,7 +584,11 @@ impl SMTSolver for Z3SMTSolver {
         } else {
             unsafe {
                 mutex!();
-                Z3_solver_pop(self.context, self.solver, n as ::std::os::raw::c_uint);
+                if let Some(m) = self.model {
+                    Z3_model_dec_ref(self.context, m);
+                }
+                self.model = None;
+                Z3_solver_pop(self.context, self.solver, 1);
             }
             self.level -= n;
             Ok(true)
