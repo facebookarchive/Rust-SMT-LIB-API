@@ -30,14 +30,14 @@ pub enum CheckSatResult {
 }
 
 // An abstract data type for SMT sorts.
-pub trait Sort: std::fmt::Debug + std::clone::Clone {
+pub trait Sort: std::fmt::Debug + std::clone::Clone + Sized {
     // Get a string representing the SMT-LIB name for the Sort.  The only
     // possible error is InternalError.
     fn to_string(&self) -> SMTResult<String>;
 }
 
 // An abstract data type for uninterpreted function symbols.
-pub trait UninterpretedFunction: std::fmt::Debug + std::clone::Clone {
+pub trait UninterpretedFunction: std::fmt::Debug + std::clone::Clone + Sized {
     // Get the name of the uninterpreted function.  The only possible error is
     // InternalError.
     fn to_string(&self) -> SMTResult<String>;
@@ -50,7 +50,7 @@ pub enum Function<F: UninterpretedFunction> {
 }
 
 // An abstract data type for SMT terms.
-pub trait Term: std::fmt::Debug + std::clone::Clone {
+pub trait Term: std::fmt::Debug + std::clone::Clone + Sized {
     // Get a string for the SMT-LIB representation of the term.  The only
     // possible error is InternalError.
     fn to_string(&self) -> SMTResult<String>;
