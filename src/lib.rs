@@ -30,14 +30,14 @@ pub enum CheckSatResult {
 }
 
 // An abstract data type for SMT sorts.
-pub trait Sort: std::fmt::Debug {
+pub trait Sort: std::fmt::Debug + std::clone::Clone {
     // Get a string representing the SMT-LIB name for the Sort.  The only
     // possible error is InternalError.
     fn to_string(&self) -> SMTResult<String>;
 }
 
 // An abstract data type for uninterpreted function symbols.
-pub trait UninterpretedFunction: std::fmt::Debug {
+pub trait UninterpretedFunction: std::fmt::Debug + std::clone::Clone {
     // Get the name of the uninterpreted function.  The only possible error is
     // InternalError.
     fn to_string(&self) -> SMTResult<String>;
@@ -129,7 +129,11 @@ pub trait SMTSolver {
     // the arity and argument sorts of the function f.  Behavior if the
     // arguments are incorrect is solver-dependent.  If a solver does not
     // support an SMT-LIB operation, an UnsupportedError is returned.
-    fn apply_fun(&self, f: &Function<Self::F>, args: &[&Self::T]) -> SMTResult<Self::T>;
+    fn apply_fun(&self, f: &Function<Self::F>, args: &[Self::T]) -> SMTResult<Self::T>;
+
+    // Sams as above, except the arguments are in a vector of references to
+    // terms rather than a vector of terms.
+    fn apply_fun_refs(&self, f: &Function<Self::F>, args: &[&Self::T]) -> SMTResult<Self::T>;
 
     ///////////////////////////////////////////////////////////////////////////
     // Solving                                                               //

@@ -444,7 +444,7 @@ fn test_apply_fun_uf() {
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let f = UF(smt.declare_fun("f", &[&int_sort], &int_sort).unwrap());
     let x = smt.declare_const("x", &int_sort).unwrap();
-    let fx = smt.apply_fun(&f, &[&x]).unwrap();
+    let fx = smt.apply_fun(&f, &[x]).unwrap();
     assert_eq!(fx.to_string().unwrap(), "(f x)");
 }
 
@@ -455,56 +455,56 @@ fn test_apply_fun_core() {
     let p = smt.declare_const("p", &bool_sort).unwrap();
     let q = smt.declare_const("q", &bool_sort).unwrap();
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Not), &[&p])
+        smt.apply_fun_refs(&Op(Fn::Not), &[&p])
             .unwrap()
             .to_string()
             .unwrap(),
         "(not p)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Implies), &[&p, &q])
+        smt.apply_fun_refs(&Op(Fn::Implies), &[&p, &q])
             .unwrap()
             .to_string()
             .unwrap(),
         "(=> p q)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::And), &[&p, &q])
+        smt.apply_fun_refs(&Op(Fn::And), &[&p, &q])
             .unwrap()
             .to_string()
             .unwrap(),
         "(and p q)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Or), &[&p, &q])
+        smt.apply_fun_refs(&Op(Fn::Or), &[&p, &q])
             .unwrap()
             .to_string()
             .unwrap(),
         "(or p q)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Xor), &[&p, &q])
+        smt.apply_fun_refs(&Op(Fn::Xor), &[&p, &q])
             .unwrap()
             .to_string()
             .unwrap(),
         "(xor p q)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Eq), &[&p, &q])
+        smt.apply_fun_refs(&Op(Fn::Eq), &[&p, &q])
             .unwrap()
             .to_string()
             .unwrap(),
         "(= p q)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Ite), &[&p, &q, &p])
+        smt.apply_fun_refs(&Op(Fn::Ite), &[&p, &q, &p])
             .unwrap()
             .to_string()
             .unwrap(),
         "(ite p q p)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Distinct), &[&p, &q])
+        smt.apply_fun_refs(&Op(Fn::Distinct), &[&p, &q])
             .unwrap()
             .to_string()
             .unwrap(),
@@ -523,102 +523,102 @@ fn test_apply_fun_arith() {
     let a = smt.declare_const("a", &real_sort).unwrap();
     let b = smt.declare_const("b", &real_sort).unwrap();
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Uminus), &[&x])
+        smt.apply_fun_refs(&Op(Fn::Uminus), &[&x])
             .unwrap()
             .to_string()
             .unwrap(),
         "(- x)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Minus), &[&a, &b])
+        smt.apply_fun_refs(&Op(Fn::Minus), &[&a, &b])
             .unwrap()
             .to_string()
             .unwrap(),
         "(- a b)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Plus), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Plus), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(+ x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Times), &[&x, &y, &z])
+        smt.apply_fun_refs(&Op(Fn::Times), &[&x, &y, &z])
             .unwrap()
             .to_string()
             .unwrap(),
         "(* x y z)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Divide), &[&a, &b])
+        smt.apply_fun_refs(&Op(Fn::Divide), &[&a, &b])
             .unwrap()
             .to_string()
             .unwrap(),
         "(/ a b)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Div), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Div), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(div x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Mod), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Mod), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(mod x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Abs), &[&x, &y]).unwrap_err(),
+        smt.apply_fun_refs(&Op(Fn::Abs), &[&x, &y]).unwrap_err(),
         SMTError::new_unsupported("Z3 does not support abs")
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::LE), &[&a, &b])
+        smt.apply_fun_refs(&Op(Fn::LE), &[&a, &b])
             .unwrap()
             .to_string()
             .unwrap(),
         "(<= a b)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::LT), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::LT), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(< x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::GE), &[&a, &b])
+        smt.apply_fun_refs(&Op(Fn::GE), &[&a, &b])
             .unwrap()
             .to_string()
             .unwrap(),
         "(>= a b)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::GT), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::GT), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(> x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::ToReal), &[&x])
+        smt.apply_fun_refs(&Op(Fn::ToReal), &[&x])
             .unwrap()
             .to_string()
             .unwrap(),
         "(to_real x)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::ToInt), &[&a])
+        smt.apply_fun_refs(&Op(Fn::ToInt), &[&a])
             .unwrap()
             .to_string()
             .unwrap(),
         "(to_int a)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::IsInt), &[&b])
+        smt.apply_fun_refs(&Op(Fn::IsInt), &[&b])
             .unwrap()
             .to_string()
             .unwrap(),
@@ -638,14 +638,14 @@ fn test_apply_fun_array() {
     let i = smt.declare_const("i", &index_sort).unwrap();
     let x = smt.declare_const("x", &element_sort).unwrap();
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Select), &[&a, &i])
+        smt.apply_fun_refs(&Op(Fn::Select), &[&a, &i])
             .unwrap()
             .to_string()
             .unwrap(),
         "(select a i)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Store), &[&a, &i, &x])
+        smt.apply_fun_refs(&Op(Fn::Store), &[&a, &i, &x])
             .unwrap()
             .to_string()
             .unwrap(),
@@ -660,242 +660,242 @@ fn test_apply_fun_bitvec() {
     let x = smt.declare_const("x", &bv32_sort).unwrap();
     let y = smt.declare_const("y", &bv32_sort).unwrap();
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Concat), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Concat), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(concat x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvnot), &[&x])
+        smt.apply_fun_refs(&Op(Fn::Bvnot), &[&x])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvnot x)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvand), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvand), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvand x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvor), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvor), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvor x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvneg), &[&x])
+        smt.apply_fun_refs(&Op(Fn::Bvneg), &[&x])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvneg x)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvadd), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvadd), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvadd x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvmul), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvmul), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvmul x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvudiv), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvudiv), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvudiv x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvurem), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvurem), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvurem x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvshl), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvshl), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvshl x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvlshr), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvlshr), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvlshr x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvult), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvult), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvult x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvnand), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvnand), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvnand x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvnor), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvnor), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvnor x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvxor), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvxor), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvxor x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvcomp), &[&x, &y]).unwrap_err(),
+        smt.apply_fun_refs(&Op(Fn::Bvcomp), &[&x, &y]).unwrap_err(),
         SMTError::new_unsupported("Z3 does not support bvcomp")
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvxnor), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvxnor), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvxnor x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvsub), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvsub), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvsub x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvsdiv), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvsdiv), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvsdiv x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvsrem), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvsrem), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvsrem x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvsmod), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvsmod), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvsmod x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvashr), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvashr), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvashr x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvule), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvule), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvule x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvugt), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvugt), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvugt x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvuge), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvuge), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvuge x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvslt), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvslt), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvslt x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvsle), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvsle), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvsle x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvsgt), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvsgt), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvsgt x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Bvsge), &[&x, &y])
+        smt.apply_fun_refs(&Op(Fn::Bvsge), &[&x, &y])
             .unwrap()
             .to_string()
             .unwrap(),
         "(bvsge x y)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Repeat(2)), &[&x])
+        smt.apply_fun_refs(&Op(Fn::Repeat(2)), &[&x])
             .unwrap()
             .to_string()
             .unwrap(),
         "((_ repeat 2) x)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::ZeroExtend(2)), &[&x])
+        smt.apply_fun_refs(&Op(Fn::ZeroExtend(2)), &[&x])
             .unwrap()
             .to_string()
             .unwrap(),
         "((_ zero_extend 2) x)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::SignExtend(3)), &[&x])
+        smt.apply_fun_refs(&Op(Fn::SignExtend(3)), &[&x])
             .unwrap()
             .to_string()
             .unwrap(),
         "((_ sign_extend 3) x)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::RotateLeft(4)), &[&x])
+        smt.apply_fun_refs(&Op(Fn::RotateLeft(4)), &[&x])
             .unwrap()
             .to_string()
             .unwrap(),
         "((_ rotate_left 4) x)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::RotateRight(5)), &[&x])
+        smt.apply_fun_refs(&Op(Fn::RotateRight(5)), &[&x])
             .unwrap()
             .to_string()
             .unwrap(),
         "((_ rotate_right 5) x)"
     );
     assert_eq!(
-        smt.apply_fun(&Op(Fn::Extract(7, 0)), &[&x])
+        smt.apply_fun_refs(&Op(Fn::Extract(7, 0)), &[&x])
             .unwrap()
             .to_string()
             .unwrap(),
@@ -954,7 +954,7 @@ fn test_check_sat_xlty() {
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let x = smt.declare_const("x", &int_sort).unwrap();
     let y = smt.declare_const("y", &int_sort).unwrap();
-    let x_lt_y = smt.apply_fun(&Op(Fn::LT), &[&x, &y]).unwrap();
+    let x_lt_y = smt.apply_fun_refs(&Op(Fn::LT), &[&x, &y]).unwrap();
     smt.assert(&x_lt_y).unwrap();
     let smt_result = smt.check_sat();
     assert_eq!(smt_result, CheckSatResult::Sat);
@@ -965,8 +965,8 @@ fn test_check_sat_xnoteqx() {
     let mut smt = new_smt_solver("z3");
     let s = smt.declare_sort("s").unwrap();
     let x = smt.declare_const("x", &s).unwrap();
-    let xeqx = smt.apply_fun(&Op(Fn::Eq), &[&x, &x]).unwrap();
-    let xnoteqx = smt.apply_fun(&Op(Fn::Not), &[&xeqx]).unwrap();
+    let xeqx = smt.apply_fun_refs(&Op(Fn::Eq), &[&x, &x]).unwrap();
+    let xnoteqx = smt.apply_fun_refs(&Op(Fn::Not), &[&xeqx]).unwrap();
     smt.assert(&xnoteqx).unwrap();
     let smt_result = smt.check_sat();
     assert_eq!(smt_result, CheckSatResult::Unsat);
@@ -979,13 +979,13 @@ fn test_check_sat_with_push() {
     let x = smt.declare_const("x", &int_sort).unwrap();
     let y = smt.declare_const("y", &int_sort).unwrap();
     let f = UF(smt.declare_fun("f", &[&int_sort], &int_sort).unwrap());
-    let fx = smt.apply_fun(&f, &[&x]).unwrap();
-    let fy = smt.apply_fun(&f, &[&y]).unwrap();
-    let fx_eq_fy = smt.apply_fun(&Op(Fn::Eq), &[&fx, &fy]).unwrap();
-    smt.assert(&smt.apply_fun(&Op(Fn::Not), &[&fx_eq_fy]).unwrap())
+    let fx = smt.apply_fun_refs(&f, &[&x]).unwrap();
+    let fy = smt.apply_fun_refs(&f, &[&y]).unwrap();
+    let fx_eq_fy = smt.apply_fun_refs(&Op(Fn::Eq), &[&fx, &fy]).unwrap();
+    smt.assert(&smt.apply_fun_refs(&Op(Fn::Not), &[&fx_eq_fy]).unwrap())
         .unwrap();
     smt.push(1).unwrap();
-    smt.assert(&smt.apply_fun(&Op(Fn::Eq), &[&x, &y]).unwrap())
+    smt.assert(&smt.apply_fun_refs(&Op(Fn::Eq), &[&x, &y]).unwrap())
         .unwrap();
     assert_eq!(smt.check_sat(), CheckSatResult::Unsat);
     smt.pop(1).unwrap();
@@ -998,7 +998,7 @@ fn test_get_value() {
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let x = smt.declare_const("x", &int_sort).unwrap();
     let xeq0 = smt
-        .apply_fun(
+        .apply_fun_refs(
             &Op(Fn::Eq),
             &[&x, &smt.const_from_int(0, &int_sort).unwrap()],
         )
@@ -1014,8 +1014,8 @@ fn test_get_value_after_unsat_error() {
     let mut smt = new_smt_solver("z3");
     let s = smt.declare_sort("s").unwrap();
     let x = smt.declare_const("x", &s).unwrap();
-    let xeqx = smt.apply_fun(&Op(Fn::Eq), &[&x, &x]).unwrap();
-    let xnoteqx = smt.apply_fun(&Op(Fn::Not), &[&xeqx]).unwrap();
+    let xeqx = smt.apply_fun_refs(&Op(Fn::Eq), &[&x, &x]).unwrap();
+    let xnoteqx = smt.apply_fun_refs(&Op(Fn::Not), &[&xeqx]).unwrap();
     smt.assert(&xnoteqx).unwrap();
     let smt_result = smt.check_sat();
     assert_eq!(smt_result, CheckSatResult::Unsat);

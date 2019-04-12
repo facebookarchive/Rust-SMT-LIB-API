@@ -41,6 +41,29 @@ pub struct Z3Sort {
     sort: Z3_sort,
 }
 
+impl Clone for Z3Sort {
+    fn clone(&self) -> Z3Sort {
+        unsafe {
+            mutex!();
+            Z3_inc_ref(self.context, Z3_sort_to_ast(self.context, self.sort));
+        }
+        Z3Sort {
+            context: self.context,
+            sort: self.sort,
+        }
+    }
+}
+
+impl Drop for Z3Sort {
+    fn drop(&mut self) {
+        unsafe {
+            mutex!();
+            Z3_dec_ref(self.context, Z3_sort_to_ast(self.context, self.sort));
+        }
+    }
+}
+
+
 impl Sort for Z3Sort {
     fn to_string(&self) -> SMTResult<String> {
         unsafe {
@@ -65,6 +88,29 @@ pub struct Z3UninterpretedFunction {
     context: Z3_context,
     decl: Z3_func_decl,
 }
+
+impl Clone for Z3UninterpretedFunction {
+    fn clone(&self) -> Z3UninterpretedFunction {
+        unsafe {
+            mutex!();
+            Z3_inc_ref(self.context, Z3_func_decl_to_ast(self.context, self.decl));
+        }
+        Z3UninterpretedFunction {
+            context: self.context,
+            decl: self.decl,
+        }
+    }
+}
+
+impl Drop for Z3UninterpretedFunction {
+    fn drop(&mut self) {
+        unsafe {
+            mutex!();
+            Z3_dec_ref(self.context, Z3_func_decl_to_ast(self.context, self.decl));
+        }
+    }
+}
+
 
 impl UninterpretedFunction for Z3UninterpretedFunction {
     fn to_string(&self) -> SMTResult<String> {
@@ -428,7 +474,14 @@ impl SMTSolver for Z3SMTSolver {
             }
         }
     }
-    fn apply_fun(
+    fn apply_fun(&self, f: &Function<Z3UninterpretedFunction>, args: &[Z3Term]) -> SMTResult<Z3Term> {
+        let mut tmp = Vec::new();
+        for arg in args {
+            tmp.push(arg);
+        }
+        return self.apply_fun_refs(f, &tmp);
+    }
+    fn apply_fun_refs(
         &self,
         f: &Function<Z3UninterpretedFunction>,
         args: &[&Z3Term],
