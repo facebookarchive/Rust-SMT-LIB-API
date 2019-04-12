@@ -50,7 +50,7 @@ pub enum Function<F: UninterpretedFunction> {
 }
 
 // An abstract data type for SMT terms.
-pub trait Term: std::fmt::Debug {
+pub trait Term: std::fmt::Debug + std::clone::Clone {
     // Get a string for the SMT-LIB representation of the term.  The only
     // possible error is InternalError.
     fn to_string(&self) -> SMTResult<String>;

@@ -99,6 +99,15 @@ fn test_declare_const() {
 }
 
 #[test]
+fn test_clone_term() {
+    let smt = new_smt_solver("z3");
+    let s = smt.lookup_sort(Sorts::Int).unwrap();
+    let x = smt.declare_const("x", &s).unwrap();
+    let x_prime = x.clone();
+    assert_eq!(x.to_string().unwrap(), x_prime.to_string().unwrap());
+}
+
+#[test]
 fn test_lookup_const_true() {
     let smt = new_smt_solver("z3");
     let t = smt.lookup_const(Fn::True).unwrap();

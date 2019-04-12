@@ -100,6 +100,28 @@ pub struct Z3Term {
     ast: Z3_ast,
 }
 
+impl Clone for Z3Term {
+    fn clone(&self) -> Z3Term {
+        unsafe {
+            mutex!();
+            Z3_inc_ref(self.context, self.ast);
+        }
+        Z3Term {
+            context: self.context,
+            ast: self.ast,
+        }
+    }
+}
+
+impl Drop for Z3Term {
+    fn drop(&mut self) {
+        unsafe {
+            mutex!();
+            Z3_dec_ref(self.context, self.ast);
+        }
+    }
+}
+
 impl Term for Z3Term {
     fn to_string(&self) -> SMTResult<String> {
         unsafe {
