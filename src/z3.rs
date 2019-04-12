@@ -41,16 +41,17 @@ pub struct Z3Sort {
     sort: Z3_sort,
 }
 
+fn new_z3_sort(context: Z3_context, sort: Z3_sort) -> Z3Sort {
+    unsafe {
+        mutex!();
+        Z3_inc_ref(context, Z3_sort_to_ast(context, sort));
+    }
+    Z3Sort { context, sort }
+}
+
 impl Clone for Z3Sort {
     fn clone(&self) -> Z3Sort {
-        unsafe {
-            mutex!();
-            Z3_inc_ref(self.context, Z3_sort_to_ast(self.context, self.sort));
-        }
-        Z3Sort {
-            context: self.context,
-            sort: self.sort,
-        }
+        new_z3_sort(self.context, self.sort)
     }
 }
 
@@ -62,7 +63,6 @@ impl Drop for Z3Sort {
         }
     }
 }
-
 
 impl Sort for Z3Sort {
     fn to_string(&self) -> SMTResult<String> {
@@ -89,16 +89,20 @@ pub struct Z3UninterpretedFunction {
     decl: Z3_func_decl,
 }
 
+fn new_z3_uninterpreted_function(
+    context: Z3_context,
+    decl: Z3_func_decl,
+) -> Z3UninterpretedFunction {
+    unsafe {
+        mutex!();
+        Z3_inc_ref(context, Z3_func_decl_to_ast(context, decl));
+        Z3UninterpretedFunction { context, decl }
+    }
+}
+
 impl Clone for Z3UninterpretedFunction {
     fn clone(&self) -> Z3UninterpretedFunction {
-        unsafe {
-            mutex!();
-            Z3_inc_ref(self.context, Z3_func_decl_to_ast(self.context, self.decl));
-        }
-        Z3UninterpretedFunction {
-            context: self.context,
-            decl: self.decl,
-        }
+        new_z3_uninterpreted_function(self.context, self.decl)
     }
 }
 
@@ -110,7 +114,6 @@ impl Drop for Z3UninterpretedFunction {
         }
     }
 }
-
 
 impl UninterpretedFunction for Z3UninterpretedFunction {
     fn to_string(&self) -> SMTResult<String> {
@@ -146,16 +149,17 @@ pub struct Z3Term {
     ast: Z3_ast,
 }
 
+fn new_z3_term(context: Z3_context, ast: Z3_ast) -> Z3Term {
+    unsafe {
+        mutex!();
+        Z3_inc_ref(context, ast);
+    }
+    Z3Term { context, ast }
+}
+
 impl Clone for Z3Term {
     fn clone(&self) -> Z3Term {
-        unsafe {
-            mutex!();
-            Z3_inc_ref(self.context, self.ast);
-        }
-        Z3Term {
-            context: self.context,
-            ast: self.ast,
-        }
+        new_z3_term(self.context, self.ast)
     }
 }
 
@@ -256,7 +260,7 @@ impl SMTSolver for Z3SMTSolver {
             mutex!();
             let cfg = Z3_mk_config();
             let cxt = Z3_mk_context(cfg);
-            let s = Z3_mk_simple_solver(cxt);
+            let s = Z3_mk_solver(cxt);
             Z3_solver_inc_ref(cxt, s);
             Z3SMTSolver {
                 config: cfg,
@@ -270,51 +274,45 @@ impl SMTSolver for Z3SMTSolver {
     }
     fn declare_sort(&self, name: &str) -> SMTResult<Z3Sort> {
         unsafe {
-            mutex!();
             match CString::new(name) {
                 Err(e) => Err(SMTError::new_internal(e.description())),
                 Ok(str) => {
-                    let sym = Z3_mk_string_symbol(self.context, str.as_ptr());
-                    Ok(Z3Sort {
-                        context: self.context,
-                        sort: Z3_mk_uninterpreted_sort(self.context, sym),
-                    })
+                    let sort = {
+                        mutex!();
+                        let sym = Z3_mk_string_symbol(self.context, str.as_ptr());
+                        Z3_mk_uninterpreted_sort(self.context, sym)
+                    };
+                    Ok(new_z3_sort(self.context, sort))
                 }
             }
         }
     }
     fn lookup_sort(&self, s: Sorts) -> SMTResult<Z3Sort> {
-        unsafe {
+        let sort = unsafe {
             mutex!();
             match s {
-                Sorts::Bool => Ok(Z3Sort {
-                    context: self.context,
-                    sort: Z3_mk_bool_sort(self.context),
-                }),
-                Sorts::Int => Ok(Z3Sort {
-                    context: self.context,
-                    sort: Z3_mk_int_sort(self.context),
-                }),
-                Sorts::Real => Ok(Z3Sort {
-                    context: self.context,
-                    sort: Z3_mk_real_sort(self.context),
-                }),
+                Sorts::Bool => Ok(Z3_mk_bool_sort(self.context)),
+                Sorts::Int => Ok(Z3_mk_int_sort(self.context)),
+                Sorts::Real => Ok(Z3_mk_real_sort(self.context)),
                 Sorts::Array => Err(SMTError::new_api("Use apply_sort to create Array sorts")),
-                Sorts::BitVec(i) => Ok(Z3Sort {
-                    context: self.context,
-                    sort: Z3_mk_bv_sort(self.context, i),
-                }),
+                Sorts::BitVec(i) => Ok(Z3_mk_bv_sort(self.context, i)),
             }
+        };
+        match sort {
+            Ok(s) => Ok(new_z3_sort(self.context, s)),
+            Err(err) => Err(err),
         }
     }
     fn apply_sort(&self, s: Sorts, s1: &Z3Sort, s2: &Z3Sort) -> SMTResult<Z3Sort> {
         unsafe {
-            mutex!();
             match s {
-                Sorts::Array => Ok(Z3Sort {
-                    context: self.context,
-                    sort: Z3_mk_array_sort(self.context, s1.sort, s2.sort),
-                }),
+                Sorts::Array => {
+                    let sort = {
+                        mutex!();
+                        Z3_mk_array_sort(self.context, s1.sort, s2.sort)
+                    };
+                    Ok(new_z3_sort(self.context, sort))
+                }
                 _ => Err(SMTError::new_api(
                     "apply_sort called with non-sort constructor",
                 )),
@@ -328,62 +326,60 @@ impl SMTSolver for Z3SMTSolver {
         sort: &Z3Sort,
     ) -> SMTResult<Z3UninterpretedFunction> {
         unsafe {
-            mutex!();
             match CString::new(name) {
                 Err(e) => Err(SMTError::new_internal(e.description())),
                 Ok(str) => {
-                    let sym = Z3_mk_string_symbol(self.context, str.as_ptr());
-                    let mut tmp = Vec::new();
-                    for arg in args {
-                        tmp.push(arg.sort);
-                    }
-                    Ok(Z3UninterpretedFunction {
-                        context: self.context,
-                        decl: Z3_mk_func_decl(
+                    let decl = {
+                        mutex!();
+                        let sym = Z3_mk_string_symbol(self.context, str.as_ptr());
+                        let mut tmp = Vec::new();
+                        for arg in args {
+                            tmp.push(arg.sort);
+                        }
+                        Z3_mk_func_decl(
                             self.context,
                             sym,
                             tmp.len() as ::std::os::raw::c_uint,
                             tmp.as_ptr(),
                             sort.sort,
-                        ),
-                    })
+                        )
+                    };
+                    Ok(new_z3_uninterpreted_function(self.context, decl))
                 }
             }
         }
     }
     fn declare_const(&self, name: &str, sort: &Z3Sort) -> SMTResult<Z3Term> {
         unsafe {
-            mutex!();
             match CString::new(name) {
                 Err(e) => Err(SMTError::new_internal(e.description())),
                 Ok(str) => {
                     let sym = Z3_mk_string_symbol(self.context, str.as_ptr());
-                    Ok(Z3Term {
-                        context: self.context,
-                        ast: Z3_mk_const(self.context, sym, sort.sort),
-                    })
+                    let term = {
+                        mutex!();
+                        Z3_mk_const(self.context, sym, sort.sort)
+                    };
+                    Ok(new_z3_term(self.context, term))
                 }
             }
         }
     }
     fn lookup_const(&self, f: Fn) -> SMTResult<Z3Term> {
-        unsafe {
+        let term = unsafe {
             mutex!();
             match f {
-                Fn::False => Ok(Z3Term {
-                    context: self.context,
-                    ast: Z3_mk_false(self.context),
-                }),
-                Fn::True => Ok(Z3Term {
-                    context: self.context,
-                    ast: Z3_mk_true(self.context),
-                }),
+                Fn::False => Ok(Z3_mk_false(self.context)),
+                Fn::True => Ok(Z3_mk_true(self.context)),
                 _ => Err(SMTError::new_api("lookup_const called with non-constant")),
             }
+        };
+        match term {
+            Ok(t) => Ok(new_z3_term(self.context, t)),
+            Err(err) => Err(err),
         }
     }
     fn const_from_int(&self, value: i64, sort: &Z3Sort) -> SMTResult<Z3Term> {
-        unsafe {
+        let term = unsafe {
             mutex!();
             let sortkind = Z3_get_sort_kind(self.context, sort.sort);
             let ok = match sortkind {
@@ -412,15 +408,16 @@ impl SMTSolver for Z3SMTSolver {
                     ))
                 }
             } else {
-                Ok(Z3Term {
-                    context: self.context,
-                    ast: Z3_mk_int64(self.context, value, sort.sort),
-                })
+                Ok(Z3_mk_int64(self.context, value, sort.sort))
             }
+        };
+        match term {
+            Ok(t) => Ok(new_z3_term(self.context, t)),
+            Err(err) => Err(err),
         }
     }
     fn const_from_string(&self, value: &str, sort: &Z3Sort) -> SMTResult<Z3Term> {
-        unsafe {
+        let term = unsafe {
             mutex!();
             let sortkind = Z3_get_sort_kind(self.context, sort.sort);
             let mut ok = match sortkind {
@@ -465,21 +462,26 @@ impl SMTSolver for Z3SMTSolver {
                 } else {
                     match CString::new(value) {
                         Err(e) => Err(SMTError::new_internal(e.description())),
-                        Ok(str) => Ok(Z3Term {
-                            context: self.context,
-                            ast: Z3_mk_numeral(self.context, str.as_ptr(), sort.sort),
-                        }),
+                        Ok(str) => Ok(Z3_mk_numeral(self.context, str.as_ptr(), sort.sort)),
                     }
                 }
             }
+        };
+        match term {
+            Ok(t) => Ok(new_z3_term(self.context, t)),
+            Err(err) => Err(err),
         }
     }
-    fn apply_fun(&self, f: &Function<Z3UninterpretedFunction>, args: &[Z3Term]) -> SMTResult<Z3Term> {
+    fn apply_fun(
+        &self,
+        f: &Function<Z3UninterpretedFunction>,
+        args: &[Z3Term],
+    ) -> SMTResult<Z3Term> {
         let mut tmp = Vec::new();
         for arg in args {
             tmp.push(arg);
         }
-        return self.apply_fun_refs(f, &tmp);
+        self.apply_fun_refs(f, &tmp)
     }
     fn apply_fun_refs(
         &self,
@@ -488,34 +490,26 @@ impl SMTSolver for Z3SMTSolver {
     ) -> SMTResult<Z3Term> {
         macro_rules! unary_fun {
             ( $z3fun:ident ) => {
-                Ok(Z3Term {
-                    context: self.context,
-                    ast: $z3fun(self.context, args[0].ast),
-                })
+                Ok($z3fun(self.context, args[0].ast))
             };
         }
         macro_rules! unary_int_fun {
             ( $z3fun:ident, $i:ident ) => {
-                Ok(Z3Term {
-                    context: self.context,
-                    ast: $z3fun(self.context, *$i as ::std::os::raw::c_uint, args[0].ast),
-                })
+                Ok($z3fun(
+                    self.context,
+                    *$i as ::std::os::raw::c_uint,
+                    args[0].ast,
+                ))
             };
         }
         macro_rules! binary_fun {
             ( $z3fun:ident ) => {
-                Ok(Z3Term {
-                    context: self.context,
-                    ast: $z3fun(self.context, args[0].ast, args[1].ast),
-                })
+                Ok($z3fun(self.context, args[0].ast, args[1].ast))
             };
         }
         macro_rules! trinary_fun {
             ( $z3fun:ident ) => {
-                Ok(Z3Term {
-                    context: self.context,
-                    ast: $z3fun(self.context, args[0].ast, args[1].ast, args[2].ast),
-                })
+                Ok($z3fun(self.context, args[0].ast, args[1].ast, args[2].ast))
             };
         }
         macro_rules! nary_fun {
@@ -524,18 +518,15 @@ impl SMTSolver for Z3SMTSolver {
                 for arg in args {
                     tmp.push(arg.ast);
                 }
-                Ok(Z3Term {
-                    context: self.context,
-                    ast: $z3fun(
-                        self.context,
-                        tmp.len() as ::std::os::raw::c_uint,
-                        tmp.as_ptr(),
-                    ),
-                })
+                Ok($z3fun(
+                    self.context,
+                    tmp.len() as ::std::os::raw::c_uint,
+                    tmp.as_ptr(),
+                ))
             }};
         }
 
-        unsafe {
+        let term = unsafe {
             mutex!();
             match f {
                 // Uninterpreted function
@@ -544,15 +535,12 @@ impl SMTSolver for Z3SMTSolver {
                     for arg in args {
                         tmp.push(arg.ast);
                     }
-                    Ok(Z3Term {
-                        context: self.context,
-                        ast: Z3_mk_app(
-                            self.context,
-                            f.decl,
-                            tmp.len() as ::std::os::raw::c_uint,
-                            tmp.as_ptr(),
-                        ),
-                    })
+                    Ok(Z3_mk_app(
+                        self.context,
+                        f.decl,
+                        tmp.len() as ::std::os::raw::c_uint,
+                        tmp.as_ptr(),
+                    ))
                 }
 
                 // Core
@@ -623,21 +611,22 @@ impl SMTSolver for Z3SMTSolver {
                 Op(Fn::RotateLeft(i)) => unary_int_fun!(Z3_mk_rotate_left, i),
                 Op(Fn::RotateRight(i)) => unary_int_fun!(Z3_mk_rotate_right, i),
                 // Bitvector ops with two integer indices
-                Op(Fn::Extract(i, j)) => Ok(Z3Term {
-                    context: self.context,
-                    ast: Z3_mk_extract(
-                        self.context,
-                        *i as ::std::os::raw::c_uint,
-                        *j as ::std::os::raw::c_uint,
-                        args[0].ast,
-                    ),
-                }),
+                Op(Fn::Extract(i, j)) => Ok(Z3_mk_extract(
+                    self.context,
+                    *i as ::std::os::raw::c_uint,
+                    *j as ::std::os::raw::c_uint,
+                    args[0].ast,
+                )),
 
                 // Unknown operator
                 _ => Err(SMTError::new_unsupported(
                     "apply_fun called with unknown operator",
                 )),
             }
+        };
+        match term {
+            Ok(t) => Ok(new_z3_term(self.context, t)),
+            Err(err) => Err(err),
         }
     }
     fn level(&self) -> u32 {
@@ -697,7 +686,7 @@ impl SMTSolver for Z3SMTSolver {
                 "get_value: can only be called after a call to check_sat that returns Sat",
             ))
         } else {
-            unsafe {
+            let term = unsafe {
                 mutex!();
                 if self.model == None {
                     let m = Z3_solver_get_model(self.context, self.solver);
@@ -712,14 +701,15 @@ impl SMTSolver for Z3SMTSolver {
                     if !res {
                         Err(SMTError::new_internal("Unable to get value"))
                     } else {
-                        Ok(Z3Term {
-                            context: self.context,
-                            ast: tmp,
-                        })
+                        Ok(tmp)
                     }
                 } else {
                     Err(SMTError::new_internal("Model not found"))
                 }
+            };
+            match term {
+                Ok(t) => Ok(new_z3_term(self.context, t)),
+                Err(err) => Err(err),
             }
         }
     }
