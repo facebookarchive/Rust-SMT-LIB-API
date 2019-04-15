@@ -83,6 +83,14 @@ fn test_apply_sort_error() {
 }
 
 #[test]
+fn test_declare_record_sort() {
+    let smt = new_smt_solver("z3");
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    let record_sort = smt.declare_record_sort(&[&int_sort, &int_sort]).unwrap();
+    assert_eq!(record_sort.to_string().unwrap(), "Record");
+}
+
+#[test]
 fn test_declare_fun() {
     let smt = new_smt_solver("z3");
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
@@ -900,6 +908,21 @@ fn test_apply_fun_bitvec() {
             .to_string()
             .unwrap(),
         "((_ extract 7 0) x)"
+    );
+}
+
+#[test]
+fn test_apply_fun_record_select() {
+    let smt = new_smt_solver("z3");
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    let record_sort = smt.declare_record_sort(&[&int_sort, &int_sort]).unwrap();
+    let r = smt.declare_const("r", &record_sort).unwrap();
+    assert_eq!(
+        smt.apply_fun_refs(&Op(Fn::RecordSelect(0)), &[&r])
+            .unwrap()
+            .to_string()
+            .unwrap(),
+        "(Record_sel_0 r)"
     );
 }
 

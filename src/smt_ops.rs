@@ -52,6 +52,10 @@ pub enum Fn {
     Select,
     Store,
 
+    // Records
+    RecordSelect(u32),
+    RecordUpdate(u32),
+
     // Bitvectors
     Concat,
     Extract(u32, u32),

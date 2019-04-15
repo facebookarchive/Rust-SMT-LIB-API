@@ -319,6 +319,82 @@ impl SMTSolver for Z3SMTSolver {
             }
         }
     }
+    fn declare_record_sort(&self, fields: &[&Z3Sort]) -> SMTResult<Z3Sort> {
+        let mut result = Ok(0 as Z3_sort);
+        unsafe {
+            mutex!();
+            let record_name = "Record".to_string();
+            let cons_name = record_name.clone() + "_cons";
+            let recognizer_name = record_name.clone() + "_is_cons";
+
+            let record_name_sym = match CString::new(record_name.clone()) {
+                Err(e) => {
+                    result = Err(SMTError::new_internal(e.description()));
+                    0 as Z3_symbol
+                }
+                Ok(str) => Z3_mk_string_symbol(self.context, str.as_ptr()),
+            };
+            let cons_name_sym = match CString::new(cons_name) {
+                Err(e) => {
+                    if result.is_ok() {
+                        result = Err(SMTError::new_internal(e.description()));
+                    };
+                    0 as Z3_symbol
+                }
+                Ok(str) => Z3_mk_string_symbol(self.context, str.as_ptr()),
+            };
+            let recognizer_name_sym = match CString::new(recognizer_name) {
+                Err(e) => {
+                    if result.is_ok() {
+                        result = Err(SMTError::new_internal(e.description()));
+                    };
+                    0 as Z3_symbol
+                }
+                Ok(str) => Z3_mk_string_symbol(self.context, str.as_ptr()),
+            };
+            let mut selector_names = Vec::new();
+            let mut sorts = Vec::new();
+            let mut sort_refs = Vec::new();
+            for (i, sort) in fields.iter().enumerate() {
+                let selector_name = record_name.clone() + "_sel_" + &i.to_string();
+                let selector_name_sym = match CString::new(selector_name) {
+                    Err(e) => {
+                        if result.is_ok() {
+                            result = Err(SMTError::new_internal(e.description()));
+                        };
+                        0 as Z3_symbol
+                    }
+                    Ok(str) => Z3_mk_string_symbol(self.context, str.as_ptr()),
+                };
+                selector_names.push(selector_name_sym);
+                sorts.push(sort.sort);
+                sort_refs.push(0);
+            }
+            if result.is_ok() {
+                let constructor = Z3_mk_constructor(
+                    self.context,
+                    cons_name_sym,
+                    recognizer_name_sym,
+                    fields.len() as ::std::os::raw::c_uint,
+                    selector_names.as_ptr(),
+                    sorts.as_ptr(),
+                    sort_refs.as_mut_ptr(),
+                );
+                let mut tmp = Vec::new();
+                tmp.push(constructor);
+                result = Ok(Z3_mk_datatype(
+                    self.context,
+                    record_name_sym,
+                    1,
+                    tmp.as_mut_ptr(),
+                ));
+            }
+        };
+        match result {
+            Err(err) => Err(err),
+            Ok(sort) => Ok(new_z3_sort(self.context, sort)),
+        }
+    }
     fn declare_fun(
         &self,
         name: &str,
@@ -617,6 +693,15 @@ impl SMTSolver for Z3SMTSolver {
                     *j as ::std::os::raw::c_uint,
                     args[0].ast,
                 )),
+                // Record operators
+                Op(Fn::RecordSelect(i)) => {
+                    let sort = Z3_get_sort(self.context, args[0].ast);
+                    let selector =
+                        Z3_get_datatype_sort_constructor_accessor(self.context, sort, 0, *i);
+                    let mut tmp = Vec::new();
+                    tmp.push(args[0].ast);
+                    Ok(Z3_mk_app(self.context, selector, 1, tmp.as_ptr()))
+                }
 
                 // Unknown operator
                 _ => Err(SMTError::new_unsupported(

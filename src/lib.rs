@@ -87,6 +87,11 @@ pub trait SMTSolver {
     // is not a sort constructor of arity 2.
     fn apply_sort(&self, s: smt_ops::Sorts, s1: &Self::S, s2: &Self::S) -> SMTResult<Self::S>;
 
+    // Create a record where sorts specifies the sorts of the fields in the
+    // record.  The order of the sorts is also the order for selects and updates
+    // using the RecordSelect and RecordUpdate operators.
+    fn declare_record_sort(&self, sorts: &[&Self::S]) -> SMTResult<Self::S>;
+
     ///////////////////////////////////////////////////////////////////////////
     // Functions                                                             //
     ///////////////////////////////////////////////////////////////////////////
