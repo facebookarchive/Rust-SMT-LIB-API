@@ -180,7 +180,7 @@ pub trait SMTSolver {
 #[macro_use]
 extern crate lazy_static;
 pub mod z3;
-pub use z3::Z3Solver as Z3Solver;
+pub use z3::Z3Solver;
 
 pub fn new_z3_solver() -> Z3Solver {
     Z3Solver::new()
