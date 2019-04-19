@@ -180,13 +180,8 @@ pub trait SMTSolver {
 #[macro_use]
 extern crate lazy_static;
 pub mod z3;
+pub use z3::Z3Solver as Z3Solver;
 
-// A factory function for generating an instance of SMTSolver.
-// Currently, it supports only z3, but the plan is to add other
-// solvers eventually.
-pub fn new_smt_solver(solver: &str) -> impl SMTSolver {
-    match solver {
-        "z3" => z3::Z3SMTSolver::new(),
-        _ => panic!("Unknown solver"),
-    }
+pub fn new_z3_solver() -> Z3Solver {
+    Z3Solver::new()
 }

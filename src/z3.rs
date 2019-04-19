@@ -228,7 +228,7 @@ impl Term for Z3Term {
 }
 
 // Implementation of SMTSolver for Z3.
-pub struct Z3SMTSolver {
+pub struct Z3Solver {
     config: Z3_config,
     context: Z3_context,
     solver: Z3_solver,
@@ -237,7 +237,7 @@ pub struct Z3SMTSolver {
     last_result: CheckSatResult,
 }
 
-impl Drop for Z3SMTSolver {
+impl Drop for Z3Solver {
     fn drop(&mut self) {
         unsafe {
             mutex!();
@@ -251,18 +251,18 @@ impl Drop for Z3SMTSolver {
     }
 }
 
-impl SMTSolver for Z3SMTSolver {
+impl SMTSolver for Z3Solver {
     type S = Z3Sort;
     type T = Z3Term;
     type F = Z3UninterpretedFunction;
-    fn new() -> Z3SMTSolver {
+    fn new() -> Z3Solver {
         unsafe {
             mutex!();
             let cfg = Z3_mk_config();
             let cxt = Z3_mk_context(cfg);
             let s = Z3_mk_solver(cxt);
             Z3_solver_inc_ref(cxt, s);
-            Z3SMTSolver {
+            Z3Solver {
                 config: cfg,
                 context: cxt,
                 solver: s,

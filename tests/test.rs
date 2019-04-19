@@ -10,53 +10,47 @@ use rust_smt::*;
 
 #[test]
 fn test_create_solver() {
-    let _smt = new_smt_solver("z3");
-}
-
-#[test]
-#[should_panic]
-fn test_create_unknown_solver_error() {
-    let _smt = new_smt_solver("foo");
+    let _smt = new_z3_solver();
 }
 
 #[test]
 fn test_declare_sort() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let s = smt.declare_sort("s").unwrap();
     assert_eq!(s.to_string().unwrap(), "s");
 }
 
 #[test]
 fn test_lookup_sort_bool() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bool_sort = smt.lookup_sort(Sorts::Bool).unwrap();
     assert_eq!(bool_sort.to_string().unwrap(), "Bool");
 }
 
 #[test]
 fn test_lookup_sort_int() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     assert_eq!(int_sort.to_string().unwrap(), "Int");
 }
 
 #[test]
 fn test_lookup_sort_real() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let real_sort = smt.lookup_sort(Sorts::Real).unwrap();
     assert_eq!(real_sort.to_string().unwrap(), "Real");
 }
 
 #[test]
 fn test_lookup_sort_bitvec8() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bv8_sort = smt.lookup_sort(Sorts::BitVec(8)).unwrap();
     assert_eq!(bv8_sort.to_string().unwrap(), "(_ BitVec 8)");
 }
 
 #[test]
 fn test_lookup_sort_array_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     assert_eq!(
         smt.lookup_sort(Sorts::Array).unwrap_err(),
         SMTError::new_api("Use apply_sort to create Array sorts")
@@ -65,7 +59,7 @@ fn test_lookup_sort_array_error() {
 
 #[test]
 fn test_apply_sort_array_int_int() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let array_sort = smt.apply_sort(Sorts::Array, &int_sort, &int_sort).unwrap();
     assert_eq!(array_sort.to_string().unwrap(), "(Array Int Int)");
@@ -73,7 +67,7 @@ fn test_apply_sort_array_int_int() {
 
 #[test]
 fn test_apply_sort_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     assert_eq!(
         smt.apply_sort(Sorts::Int, &int_sort, &int_sort)
@@ -84,7 +78,7 @@ fn test_apply_sort_error() {
 
 #[test]
 fn test_declare_record_sort() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let record_sort = smt.declare_record_sort(&[&int_sort, &int_sort]).unwrap();
     assert_eq!(record_sort.to_string().unwrap(), "Record");
@@ -92,7 +86,7 @@ fn test_declare_record_sort() {
 
 #[test]
 fn test_declare_fun() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let f = smt.declare_fun("f", &[&int_sort], &int_sort).unwrap();
     assert_eq!(f.to_string().unwrap(), "f");
@@ -100,7 +94,7 @@ fn test_declare_fun() {
 
 #[test]
 fn test_declare_const() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let s = smt.lookup_sort(Sorts::Int).unwrap();
     let x = smt.declare_const("x", &s).unwrap();
     assert_eq!(x.to_string().unwrap(), "x");
@@ -108,7 +102,7 @@ fn test_declare_const() {
 
 #[test]
 fn test_clone_term() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let s = smt.lookup_sort(Sorts::Int).unwrap();
     let x = smt.declare_const("x", &s).unwrap();
     let x_prime = x.clone();
@@ -117,21 +111,21 @@ fn test_clone_term() {
 
 #[test]
 fn test_lookup_const_true() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let t = smt.lookup_const(Fn::True).unwrap();
     assert_eq!(t.to_string().unwrap(), "true");
 }
 
 #[test]
 fn test_lookup_const_false() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let f = smt.lookup_const(Fn::False).unwrap();
     assert_eq!(f.to_string().unwrap(), "false");
 }
 
 #[test]
 fn test_lookup_nonconst_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     assert_eq!(
         smt.lookup_const(Fn::Uminus).unwrap_err(),
         SMTError::new_api("lookup_const called with non-constant")
@@ -140,7 +134,7 @@ fn test_lookup_nonconst_error() {
 
 #[test]
 fn test_symbolic_const_to_int_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let x = smt.declare_const("x", &int_sort).unwrap();
     assert_eq!(
@@ -151,7 +145,7 @@ fn test_symbolic_const_to_int_error() {
 
 #[test]
 fn test_bad_sorted_const_to_int_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bool_sort = smt.lookup_sort(Sorts::Bool).unwrap();
     let b = smt.declare_const("b", &bool_sort).unwrap();
     assert_eq!(
@@ -162,7 +156,7 @@ fn test_bad_sorted_const_to_int_error() {
 
 #[test]
 fn test_non_int_real_const_to_int_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let real_sort = smt.lookup_sort(Sorts::Real).unwrap();
     let x = smt.const_from_string("0.5", &real_sort).unwrap();
     assert_eq!(
@@ -173,7 +167,7 @@ fn test_non_int_real_const_to_int_error() {
 
 #[test]
 fn test_const_from_int_to_int() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     assert_eq!(
         smt.const_from_int(0, &int_sort).unwrap().to_int().unwrap(),
@@ -197,7 +191,7 @@ fn test_const_from_int_to_int() {
 
 #[test]
 fn test_const_from_int_to_real() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let real_sort = smt.lookup_sort(Sorts::Real).unwrap();
     assert_eq!(
         smt.const_from_int(1, &real_sort)
@@ -224,7 +218,7 @@ fn test_const_from_int_to_real() {
 
 #[test]
 fn test_const_from_int_to_bv() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bv8_sort = smt.lookup_sort(Sorts::BitVec(8)).unwrap();
     assert_eq!(
         smt.const_from_int(1, &bv8_sort)
@@ -251,7 +245,7 @@ fn test_const_from_int_to_bv() {
 
 #[test]
 fn test_const_from_int_to_bv_to_int() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bv8_sort = smt.lookup_sort(Sorts::BitVec(8)).unwrap();
     assert_eq!(
         smt.const_from_int(1, &bv8_sort).unwrap().to_int().unwrap(),
@@ -275,7 +269,7 @@ fn test_const_from_int_to_bv_to_int() {
 
 #[test]
 fn test_const_from_int_bad_sort_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bool_sort = smt.lookup_sort(Sorts::Bool).unwrap();
     assert_eq!(
         smt.const_from_int(1, &bool_sort).unwrap_err(),
@@ -285,7 +279,7 @@ fn test_const_from_int_bad_sort_error() {
 
 #[test]
 fn test_const_from_int_negative_bv_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bv16_sort = smt.lookup_sort(Sorts::BitVec(16)).unwrap();
     assert_eq!(
         smt.const_from_int(-1, &bv16_sort).unwrap_err(),
@@ -297,7 +291,7 @@ fn test_const_from_int_negative_bv_error() {
 
 #[test]
 fn test_const_from_int_bv_too_large_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bv16_sort = smt.lookup_sort(Sorts::BitVec(16)).unwrap();
     assert_eq!(
         smt.const_from_int(65535, &bv16_sort)
@@ -316,7 +310,7 @@ fn test_const_from_int_bv_too_large_error() {
 
 #[test]
 fn test_const_from_string_to_int() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     assert_eq!(
         smt.const_from_string("0", &int_sort)
@@ -343,7 +337,7 @@ fn test_const_from_string_to_int() {
 
 #[test]
 fn test_const_from_string_to_real() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let real_sort = smt.lookup_sort(Sorts::Real).unwrap();
     assert_eq!(
         smt.const_from_string("100", &real_sort)
@@ -370,7 +364,7 @@ fn test_const_from_string_to_real() {
 
 #[test]
 fn test_const_from_string_to_bv() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bv256_sort = smt.lookup_sort(Sorts::BitVec(256)).unwrap();
     assert_eq!(
         smt.const_from_string("100", &bv256_sort)
@@ -397,7 +391,7 @@ fn test_const_from_string_to_bv() {
 
 #[test]
 fn test_const_from_string_bad_sort_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bool_sort = smt.lookup_sort(Sorts::Bool).unwrap();
     assert_eq!(
         smt.const_from_string("1", &bool_sort).unwrap_err(),
@@ -407,7 +401,7 @@ fn test_const_from_string_bad_sort_error() {
 
 #[test]
 fn test_const_from_string_decimal_in_int_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     assert_eq!(
         smt.const_from_string("1.0", &int_sort).unwrap_err(),
@@ -417,7 +411,7 @@ fn test_const_from_string_decimal_in_int_error() {
 
 #[test]
 fn test_const_from_string_too_many_decimals_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let real_sort = smt.lookup_sort(Sorts::Real).unwrap();
     assert_eq!(
         smt.const_from_string("1.0.", &real_sort).unwrap_err(),
@@ -427,7 +421,7 @@ fn test_const_from_string_too_many_decimals_error() {
 
 #[test]
 fn test_const_from_string_neg_bitvector_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bv32_sort = smt.lookup_sort(Sorts::BitVec(32)).unwrap();
     assert_eq!(
         smt.const_from_string("-1", &bv32_sort).unwrap_err(),
@@ -437,7 +431,7 @@ fn test_const_from_string_neg_bitvector_error() {
 
 #[test]
 fn test_const_from_string_invalid_char_error() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bv32_sort = smt.lookup_sort(Sorts::BitVec(32)).unwrap();
     assert_eq!(
         smt.const_from_string("1234567890ABCDEF", &bv32_sort)
@@ -448,7 +442,7 @@ fn test_const_from_string_invalid_char_error() {
 
 #[test]
 fn test_apply_fun_uf() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let f = UF(smt.declare_fun("f", &[&int_sort], &int_sort).unwrap());
     let x = smt.declare_const("x", &int_sort).unwrap();
@@ -458,7 +452,7 @@ fn test_apply_fun_uf() {
 
 #[test]
 fn test_apply_fun_core() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bool_sort = smt.lookup_sort(Sorts::Bool).unwrap();
     let p = smt.declare_const("p", &bool_sort).unwrap();
     let q = smt.declare_const("q", &bool_sort).unwrap();
@@ -522,7 +516,7 @@ fn test_apply_fun_core() {
 
 #[test]
 fn test_apply_fun_arith() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let real_sort = smt.lookup_sort(Sorts::Real).unwrap();
     let x = smt.declare_const("x", &int_sort).unwrap();
@@ -636,7 +630,7 @@ fn test_apply_fun_arith() {
 
 #[test]
 fn test_apply_fun_array() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let index_sort = smt.declare_sort("A").unwrap();
     let element_sort = smt.declare_sort("B").unwrap();
     let array_sort = smt
@@ -663,7 +657,7 @@ fn test_apply_fun_array() {
 
 #[test]
 fn test_apply_fun_bitvec() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let bv32_sort = smt.lookup_sort(Sorts::BitVec(32)).unwrap();
     let x = smt.declare_const("x", &bv32_sort).unwrap();
     let y = smt.declare_const("y", &bv32_sort).unwrap();
@@ -913,7 +907,7 @@ fn test_apply_fun_bitvec() {
 
 #[test]
 fn test_apply_fun_record_select() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let record_sort = smt.declare_record_sort(&[&int_sort, &int_sort]).unwrap();
     let r = smt.declare_const("r", &record_sort).unwrap();
@@ -928,13 +922,13 @@ fn test_apply_fun_record_select() {
 
 #[test]
 fn test_level() {
-    let smt = new_smt_solver("z3");
+    let smt = new_z3_solver();
     assert_eq!(smt.level(), 0);
 }
 
 #[test]
 fn test_push_pop() {
-    let mut smt = new_smt_solver("z3");
+    let mut smt = new_z3_solver();
     smt.push(1).unwrap();
     assert_eq!(smt.level(), 1);
     smt.pop(1).unwrap();
@@ -943,7 +937,7 @@ fn test_push_pop() {
 
 #[test]
 fn test_pop_too_far_error() {
-    let mut smt = new_smt_solver("z3");
+    let mut smt = new_z3_solver();
     smt.push(1).unwrap();
     assert_eq!(
         smt.pop(2).unwrap_err(),
@@ -953,27 +947,27 @@ fn test_pop_too_far_error() {
 
 #[test]
 fn test_assert() {
-    let mut smt = new_smt_solver("z3");
+    let mut smt = new_z3_solver();
     smt.assert(&smt.lookup_const(Fn::True).unwrap()).unwrap();
 }
 
 #[test]
 fn test_check_sat_true() {
-    let mut smt = new_smt_solver("z3");
+    let mut smt = new_z3_solver();
     smt.assert(&smt.lookup_const(Fn::True).unwrap()).unwrap();
     assert_eq!(smt.check_sat(), CheckSatResult::Sat);
 }
 
 #[test]
 fn test_check_sat_false() {
-    let mut smt = new_smt_solver("z3");
+    let mut smt = new_z3_solver();
     smt.assert(&smt.lookup_const(Fn::False).unwrap()).unwrap();
     assert_eq!(smt.check_sat(), CheckSatResult::Unsat);
 }
 
 #[test]
 fn test_check_sat_xlty() {
-    let mut smt = new_smt_solver("z3");
+    let mut smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let x = smt.declare_const("x", &int_sort).unwrap();
     let y = smt.declare_const("y", &int_sort).unwrap();
@@ -985,7 +979,7 @@ fn test_check_sat_xlty() {
 
 #[test]
 fn test_check_sat_xnoteqx() {
-    let mut smt = new_smt_solver("z3");
+    let mut smt = new_z3_solver();
     let s = smt.declare_sort("s").unwrap();
     let x = smt.declare_const("x", &s).unwrap();
     let xeqx = smt.apply_fun_refs(&Op(Fn::Eq), &[&x, &x]).unwrap();
@@ -997,7 +991,7 @@ fn test_check_sat_xnoteqx() {
 
 #[test]
 fn test_check_sat_with_push() {
-    let mut smt = new_smt_solver("z3");
+    let mut smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let x = smt.declare_const("x", &int_sort).unwrap();
     let y = smt.declare_const("y", &int_sort).unwrap();
@@ -1017,7 +1011,7 @@ fn test_check_sat_with_push() {
 
 #[test]
 fn test_get_value() {
-    let mut smt = new_smt_solver("z3");
+    let mut smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
     let x = smt.declare_const("x", &int_sort).unwrap();
     let xeq0 = smt
@@ -1034,7 +1028,7 @@ fn test_get_value() {
 
 #[test]
 fn test_get_value_after_unsat_error() {
-    let mut smt = new_smt_solver("z3");
+    let mut smt = new_z3_solver();
     let s = smt.declare_sort("s").unwrap();
     let x = smt.declare_const("x", &s).unwrap();
     let xeqx = smt.apply_fun_refs(&Op(Fn::Eq), &[&x, &x]).unwrap();
@@ -1052,7 +1046,7 @@ fn test_get_value_after_unsat_error() {
 
 #[test]
 fn test_push_pop_get_model() {
-    let mut smt = new_smt_solver("z3");
+    let mut smt = new_z3_solver();
     let x = smt
         .declare_const("x", &smt.lookup_sort(Sorts::Int).unwrap())
         .unwrap();
