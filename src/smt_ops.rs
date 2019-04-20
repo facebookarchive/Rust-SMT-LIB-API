@@ -18,7 +18,7 @@ pub enum Sorts {
     BitVec(u32),
 }
 
-pub enum Fn {
+pub enum Fn<'a> {
     // Core theory
     False,
     True,
@@ -53,8 +53,8 @@ pub enum Fn {
     Store,
 
     // Records
-    RecordSelect(u32),
-    RecordUpdate(u32),
+    RecordSelect(&'a str),
+    RecordUpdate(&'a str),
 
     // Bitvectors
     Concat,

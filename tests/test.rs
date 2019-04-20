@@ -78,9 +78,11 @@ fn test_apply_sort_error() {
 
 #[test]
 fn test_declare_record_sort() {
-    let smt = new_z3_solver();
+    let mut smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
-    let record_sort = smt.declare_record_sort(&[&int_sort, &int_sort]).unwrap();
+    let record_sort = smt
+        .declare_record_sort("Record", &["hd", "tl"], &[&int_sort, &int_sort])
+        .unwrap();
     assert_eq!(record_sort.to_string().unwrap(), "Record");
 }
 
@@ -437,6 +439,43 @@ fn test_const_from_string_invalid_char_error() {
         smt.const_from_string("1234567890ABCDEF", &bv32_sort)
             .unwrap_err(),
         SMTError::new_api("const_from_string: string contains invalid character: digit expected")
+    );
+}
+
+#[test]
+fn test_record_const() {
+    let mut smt = new_z3_solver();
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    let record_sort = smt
+        .declare_record_sort("Record", &["hd", "tl"], &[&int_sort, &int_sort])
+        .unwrap();
+    let x = smt.declare_const("x", &int_sort).unwrap();
+    let zero = smt.const_from_int(0, &int_sort).unwrap();
+    assert_eq!(
+        smt.record_const_refs(&record_sort, &[&x, &zero])
+            .unwrap()
+            .to_string()
+            .unwrap(),
+        "(Record_cons x 0)"
+    );
+    assert_eq!(
+        smt.record_const(&record_sort, &[x, zero])
+            .unwrap()
+            .to_string()
+            .unwrap(),
+        "(Record_cons x 0)"
+    );
+}
+
+#[test]
+fn test_record_const_error() {
+    let smt = new_z3_solver();
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    let x = smt.declare_const("x", &int_sort).unwrap();
+    let zero = smt.const_from_int(0, &int_sort).unwrap();
+    assert_eq!(
+        smt.record_const_refs(&int_sort, &[&x, &zero]).unwrap_err(),
+        SMTError::new_api("record_const_refs: Non-record or unknown sort")
     );
 }
 
@@ -907,16 +946,46 @@ fn test_apply_fun_bitvec() {
 
 #[test]
 fn test_apply_fun_record_select() {
-    let smt = new_z3_solver();
+    let mut smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
-    let record_sort = smt.declare_record_sort(&[&int_sort, &int_sort]).unwrap();
+    let record_sort = smt
+        .declare_record_sort("IntXInt", &["first", "second"], &[&int_sort, &int_sort])
+        .unwrap();
     let r = smt.declare_const("r", &record_sort).unwrap();
     assert_eq!(
-        smt.apply_fun_refs(&Op(Fn::RecordSelect(0)), &[&r])
+        smt.apply_fun_refs(&Op(Fn::RecordSelect("first")), &[&r])
             .unwrap()
             .to_string()
             .unwrap(),
-        "(Record_sel_0 r)"
+        "(first r)"
+    );
+    assert_eq!(
+        smt.apply_fun_refs(&Op(Fn::RecordSelect("second")), &[&r])
+            .unwrap()
+            .to_string()
+            .unwrap(),
+        "(second r)"
+    );
+}
+
+#[test]
+fn test_apply_fun_record_select_error() {
+    let mut smt = new_z3_solver();
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    let record_sort = smt
+        .declare_record_sort("IntXInt", &["first", "second"], &[&int_sort, &int_sort])
+        .unwrap();
+    let r = smt.declare_const("r", &record_sort).unwrap();
+    assert_eq!(
+        smt.apply_fun_refs(&Op(Fn::RecordSelect("third")), &[&r])
+            .unwrap_err(),
+        SMTError::new_api("RecordSelect applied with unknown field")
+    );
+    let x = smt.declare_const("x", &int_sort).unwrap();
+    assert_eq!(
+        smt.apply_fun_refs(&Op(Fn::RecordSelect("first")), &[&x])
+            .unwrap_err(),
+        SMTError::new_api("RecordSelect applied to non-record or unknown sort")
     );
 }
 

@@ -44,8 +44,8 @@ pub trait UninterpretedFunction: std::fmt::Debug + std::clone::Clone + Sized {
 }
 
 // A Function is either a built-in operator or an uninterpreted function.
-pub enum Function<F: UninterpretedFunction> {
-    Op(smt_ops::Fn),
+pub enum Function<'a, F: UninterpretedFunction> {
+    Op(smt_ops::Fn<'a>),
     UF(F),
 }
 
@@ -87,10 +87,15 @@ pub trait SMTSolver {
     // is not a sort constructor of arity 2.
     fn apply_sort(&self, s: smt_ops::Sorts, s1: &Self::S, s2: &Self::S) -> SMTResult<Self::S>;
 
-    // Create a record where sorts specifies the sorts of the fields in the
-    // record.  The order of the sorts is also the order for selects and updates
-    // using the RecordSelect and RecordUpdate operators.
-    fn declare_record_sort(&self, sorts: &[&Self::S]) -> SMTResult<Self::S>;
+    // Create a record with field names given in fields and corresponding sorts
+    // given in sorts.  The fields are used together with the RecordSelect and
+    // RecordUpdate operators to read from or update records of this sort.
+    fn declare_record_sort(
+        &mut self,
+        name: &str,
+        fields: &[&str],
+        sorts: &[&Self::S],
+    ) -> SMTResult<Self::S>;
 
     ///////////////////////////////////////////////////////////////////////////
     // Functions                                                             //
@@ -127,6 +132,18 @@ pub trait SMTSolver {
     // value fits within the bitwidth for bitvector sorts.  Behavior in that
     // case is dependent on the solver.
     fn const_from_string(&self, value: &str, sort: &Self::S) -> SMTResult<Self::T>;
+
+    // Construct a record literal of sort record_sort using the terms in
+    // field_values.
+    fn record_const(&self, record_sort: &Self::S, field_values: &[Self::T]) -> SMTResult<Self::T>;
+
+    // Sams as above, except the arguments are in a vector of references to
+    // terms rather than a vector of terms.
+    fn record_const_refs(
+        &self,
+        record_sort: &Self::S,
+        field_values: &[&Self::T],
+    ) -> SMTResult<Self::T>;
 
     // Apply a function f to a vector of arguments to get a Term object.  f can
     // be either a built-in function operator or the result of an earlier call
@@ -176,7 +193,7 @@ pub trait SMTSolver {
     fn get_value(&mut self, t: &Self::T) -> SMTResult<Self::T>;
 }
 
-// Needed by z3.
+// Support for Z3 solver.
 #[macro_use]
 extern crate lazy_static;
 pub mod z3;

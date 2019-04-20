@@ -6,6 +6,8 @@
 // This file contains an implementation of the SMTSolver trait using
 // the Z3 SMT solver.  We use the z3-sys crate for bindings to Z3.
 
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 
@@ -35,15 +37,17 @@ macro_rules! mutex {
 // macro_rules! mutex { () => { }; }
 
 // Implementation of Sort for Z3.
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct Z3Sort {
     context: Z3_context,
     sort: Z3_sort,
 }
 
-fn new_z3_sort(context: Z3_context, sort: Z3_sort) -> Z3Sort {
+fn new_z3_sort(context: Z3_context, sort: Z3_sort, mutex: bool) -> Z3Sort {
     unsafe {
-        mutex!();
+        if mutex {
+            mutex!();
+        }
         Z3_inc_ref(context, Z3_sort_to_ast(context, sort));
     }
     Z3Sort { context, sort }
@@ -51,7 +55,7 @@ fn new_z3_sort(context: Z3_context, sort: Z3_sort) -> Z3Sort {
 
 impl Clone for Z3Sort {
     fn clone(&self) -> Z3Sort {
-        new_z3_sort(self.context, self.sort)
+        new_z3_sort(self.context, self.sort, true)
     }
 }
 
@@ -83,7 +87,7 @@ impl Sort for Z3Sort {
 }
 
 // Implementation of UninterpretedFunction for Z3.
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct Z3UninterpretedFunction {
     context: Z3_context,
     decl: Z3_func_decl,
@@ -92,9 +96,12 @@ pub struct Z3UninterpretedFunction {
 fn new_z3_uninterpreted_function(
     context: Z3_context,
     decl: Z3_func_decl,
+    mutex: bool,
 ) -> Z3UninterpretedFunction {
     unsafe {
-        mutex!();
+        if mutex {
+            mutex!();
+        }
         Z3_inc_ref(context, Z3_func_decl_to_ast(context, decl));
         Z3UninterpretedFunction { context, decl }
     }
@@ -102,7 +109,7 @@ fn new_z3_uninterpreted_function(
 
 impl Clone for Z3UninterpretedFunction {
     fn clone(&self) -> Z3UninterpretedFunction {
-        new_z3_uninterpreted_function(self.context, self.decl)
+        new_z3_uninterpreted_function(self.context, self.decl, true)
     }
 }
 
@@ -143,15 +150,17 @@ impl UninterpretedFunction for Z3UninterpretedFunction {
 }
 
 // Implementation of Term for Z3.
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct Z3Term {
     context: Z3_context,
     ast: Z3_ast,
 }
 
-fn new_z3_term(context: Z3_context, ast: Z3_ast) -> Z3Term {
+fn new_z3_term(context: Z3_context, ast: Z3_ast, mutex: bool) -> Z3Term {
     unsafe {
-        mutex!();
+        if mutex {
+            mutex!();
+        }
         Z3_inc_ref(context, ast);
     }
     Z3Term { context, ast }
@@ -159,7 +168,7 @@ fn new_z3_term(context: Z3_context, ast: Z3_ast) -> Z3Term {
 
 impl Clone for Z3Term {
     fn clone(&self) -> Z3Term {
-        new_z3_term(self.context, self.ast)
+        new_z3_term(self.context, self.ast, true)
     }
 }
 
@@ -227,6 +236,12 @@ impl Term for Z3Term {
     }
 }
 
+// Used to keep track of declared record sorts.
+struct RecordInfo {
+    field_map: HashMap<String, u32>,
+    cons_decl: Z3UninterpretedFunction,
+}
+
 // Implementation of SMTSolver for Z3.
 pub struct Z3Solver {
     config: Z3_config,
@@ -235,11 +250,13 @@ pub struct Z3Solver {
     level: u32,
     model: Option<Z3_model>,
     last_result: CheckSatResult,
+    record_map: HashMap<Z3_sort, RecordInfo>,
 }
 
 impl Drop for Z3Solver {
     fn drop(&mut self) {
         unsafe {
+            self.record_map.clear();
             mutex!();
             if let Some(m) = self.model {
                 Z3_model_dec_ref(self.context, m);
@@ -269,6 +286,8 @@ impl SMTSolver for Z3Solver {
                 level: 0,
                 model: None,
                 last_result: CheckSatResult::Unknown,
+
+                record_map: HashMap::new(),
             }
         }
     }
@@ -282,25 +301,37 @@ impl SMTSolver for Z3Solver {
                         let sym = Z3_mk_string_symbol(self.context, str.as_ptr());
                         Z3_mk_uninterpreted_sort(self.context, sym)
                     };
-                    Ok(new_z3_sort(self.context, sort))
+                    Ok(new_z3_sort(self.context, sort, true))
                 }
             }
         }
     }
     fn lookup_sort(&self, s: Sorts) -> SMTResult<Z3Sort> {
-        let sort = unsafe {
+        unsafe {
             mutex!();
             match s {
-                Sorts::Bool => Ok(Z3_mk_bool_sort(self.context)),
-                Sorts::Int => Ok(Z3_mk_int_sort(self.context)),
-                Sorts::Real => Ok(Z3_mk_real_sort(self.context)),
+                Sorts::Bool => Ok(new_z3_sort(
+                    self.context,
+                    Z3_mk_bool_sort(self.context),
+                    false,
+                )),
+                Sorts::Int => Ok(new_z3_sort(
+                    self.context,
+                    Z3_mk_int_sort(self.context),
+                    false,
+                )),
+                Sorts::Real => Ok(new_z3_sort(
+                    self.context,
+                    Z3_mk_real_sort(self.context),
+                    false,
+                )),
                 Sorts::Array => Err(SMTError::new_api("Use apply_sort to create Array sorts")),
-                Sorts::BitVec(i) => Ok(Z3_mk_bv_sort(self.context, i)),
+                Sorts::BitVec(i) => Ok(new_z3_sort(
+                    self.context,
+                    Z3_mk_bv_sort(self.context, i),
+                    false,
+                )),
             }
-        };
-        match sort {
-            Ok(s) => Ok(new_z3_sort(self.context, s)),
-            Err(err) => Err(err),
         }
     }
     fn apply_sort(&self, s: Sorts, s1: &Z3Sort, s2: &Z3Sort) -> SMTResult<Z3Sort> {
@@ -311,7 +342,7 @@ impl SMTSolver for Z3Solver {
                         mutex!();
                         Z3_mk_array_sort(self.context, s1.sort, s2.sort)
                     };
-                    Ok(new_z3_sort(self.context, sort))
+                    Ok(new_z3_sort(self.context, sort, true))
                 }
                 _ => Err(SMTError::new_api(
                     "apply_sort called with non-sort constructor",
@@ -319,17 +350,29 @@ impl SMTSolver for Z3Solver {
             }
         }
     }
-    fn declare_record_sort(&self, fields: &[&Z3Sort]) -> SMTResult<Z3Sort> {
+    fn declare_record_sort(
+        &mut self,
+        name: &str,
+        fields: &[&str],
+        sorts: &[&Z3Sort],
+    ) -> SMTResult<Z3Sort> {
         let mut result = Ok(0 as Z3_sort);
+        if fields.len() != sorts.len() {
+            result = Err(SMTError::new_api(
+                "declare_record_sort: fields and sorts must have same length.",
+            ));
+        };
         unsafe {
             mutex!();
-            let record_name = "Record".to_string();
+            let record_name = name.to_string();
             let cons_name = record_name.clone() + "_cons";
             let recognizer_name = record_name.clone() + "_is_cons";
 
             let record_name_sym = match CString::new(record_name.clone()) {
                 Err(e) => {
-                    result = Err(SMTError::new_internal(e.description()));
+                    if result.is_ok() {
+                        result = Err(SMTError::new_internal(e.description()));
+                    }
                     0 as Z3_symbol
                 }
                 Ok(str) => Z3_mk_string_symbol(self.context, str.as_ptr()),
@@ -353,10 +396,10 @@ impl SMTSolver for Z3Solver {
                 Ok(str) => Z3_mk_string_symbol(self.context, str.as_ptr()),
             };
             let mut selector_names = Vec::new();
-            let mut sorts = Vec::new();
+            let mut z3_sorts = Vec::new();
             let mut sort_refs = Vec::new();
-            for (i, sort) in fields.iter().enumerate() {
-                let selector_name = record_name.clone() + "_sel_" + &i.to_string();
+            for (i, sort) in sorts.iter().enumerate() {
+                let selector_name = fields[i].to_string();
                 let selector_name_sym = match CString::new(selector_name) {
                     Err(e) => {
                         if result.is_ok() {
@@ -367,7 +410,7 @@ impl SMTSolver for Z3Solver {
                     Ok(str) => Z3_mk_string_symbol(self.context, str.as_ptr()),
                 };
                 selector_names.push(selector_name_sym);
-                sorts.push(sort.sort);
+                z3_sorts.push(sort.sort);
                 sort_refs.push(0);
             }
             if result.is_ok() {
@@ -377,22 +420,73 @@ impl SMTSolver for Z3Solver {
                     recognizer_name_sym,
                     fields.len() as ::std::os::raw::c_uint,
                     selector_names.as_ptr(),
-                    sorts.as_ptr(),
+                    z3_sorts.as_ptr(),
                     sort_refs.as_mut_ptr(),
                 );
                 let mut tmp = Vec::new();
                 tmp.push(constructor);
-                result = Ok(Z3_mk_datatype(
+                let datatype = Z3_mk_datatype(self.context, record_name_sym, 1, tmp.as_mut_ptr());
+                let dummy = 0 as Z3_func_decl;
+                let mut cons_decls = [dummy];
+                let mut tester_decls = [dummy];
+                let mut accessors = Vec::new();
+                for _sort in sorts {
+                    accessors.push(dummy);
+                }
+                println!("{:?}", cons_decls[0]);
+                Z3_query_constructor(
                     self.context,
-                    record_name_sym,
-                    1,
-                    tmp.as_mut_ptr(),
-                ));
+                    constructor,
+                    fields.len() as ::std::os::raw::c_uint,
+                    cons_decls.as_mut_ptr(),
+                    tester_decls.as_mut_ptr(),
+                    accessors.as_mut_ptr(),
+                );
+                println!("{:?}", cons_decls[0]);
+                let ptr = Z3_get_decl_name(self.context, cons_decls[0]);
+                let ptr = Z3_get_symbol_string(self.context, ptr);
+                let cstr = CStr::from_ptr(ptr);
+                println!("{:?}", cstr);
+                let mut field_map = HashMap::new();
+                for (i, field) in fields.iter().enumerate() {
+                    match field_map.entry(field.to_string()) {
+                        Entry::Occupied(_) => {
+                            if result.is_ok() {
+                                result = Err(SMTError::new_api(
+                                    "declare_record_sort: field names must be distinct",
+                                ));
+                            }
+                        }
+                        Entry::Vacant(v) => {
+                            v.insert(i as u32);
+                        }
+                    }
+                }
+                let record_info = RecordInfo {
+                    field_map,
+                    cons_decl: new_z3_uninterpreted_function(self.context, cons_decls[0], false),
+                };
+                match self.record_map.entry(datatype) {
+                    Entry::Occupied(_) => {
+                        if result.is_ok() {
+                            result = Err(SMTError::new_api(
+                                "declare_record_sort: record already exists",
+                            ));
+                        }
+                    }
+                    Entry::Vacant(v) => {
+                        v.insert(record_info);
+                    }
+                };
+                Z3_del_constructor(self.context, constructor);
+                if result.is_ok() {
+                    result = Ok(datatype);
+                }
             }
         };
         match result {
             Err(err) => Err(err),
-            Ok(sort) => Ok(new_z3_sort(self.context, sort)),
+            Ok(sort) => Ok(new_z3_sort(self.context, sort, true)),
         }
     }
     fn declare_fun(
@@ -420,7 +514,7 @@ impl SMTSolver for Z3Solver {
                             sort.sort,
                         )
                     };
-                    Ok(new_z3_uninterpreted_function(self.context, decl))
+                    Ok(new_z3_uninterpreted_function(self.context, decl, true))
                 }
             }
         }
@@ -435,27 +529,23 @@ impl SMTSolver for Z3Solver {
                         mutex!();
                         Z3_mk_const(self.context, sym, sort.sort)
                     };
-                    Ok(new_z3_term(self.context, term))
+                    Ok(new_z3_term(self.context, term, true))
                 }
             }
         }
     }
     fn lookup_const(&self, f: Fn) -> SMTResult<Z3Term> {
-        let term = unsafe {
+        unsafe {
             mutex!();
             match f {
-                Fn::False => Ok(Z3_mk_false(self.context)),
-                Fn::True => Ok(Z3_mk_true(self.context)),
+                Fn::False => Ok(new_z3_term(self.context, Z3_mk_false(self.context), false)),
+                Fn::True => Ok(new_z3_term(self.context, Z3_mk_true(self.context), false)),
                 _ => Err(SMTError::new_api("lookup_const called with non-constant")),
             }
-        };
-        match term {
-            Ok(t) => Ok(new_z3_term(self.context, t)),
-            Err(err) => Err(err),
         }
     }
     fn const_from_int(&self, value: i64, sort: &Z3Sort) -> SMTResult<Z3Term> {
-        let term = unsafe {
+        unsafe {
             mutex!();
             let sortkind = Z3_get_sort_kind(self.context, sort.sort);
             let ok = match sortkind {
@@ -484,16 +574,16 @@ impl SMTSolver for Z3Solver {
                     ))
                 }
             } else {
-                Ok(Z3_mk_int64(self.context, value, sort.sort))
+                Ok(new_z3_term(
+                    self.context,
+                    Z3_mk_int64(self.context, value, sort.sort),
+                    false,
+                ))
             }
-        };
-        match term {
-            Ok(t) => Ok(new_z3_term(self.context, t)),
-            Err(err) => Err(err),
         }
     }
     fn const_from_string(&self, value: &str, sort: &Z3Sort) -> SMTResult<Z3Term> {
-        let term = unsafe {
+        unsafe {
             mutex!();
             let sortkind = Z3_get_sort_kind(self.context, sort.sort);
             let mut ok = match sortkind {
@@ -538,14 +628,49 @@ impl SMTSolver for Z3Solver {
                 } else {
                     match CString::new(value) {
                         Err(e) => Err(SMTError::new_internal(e.description())),
-                        Ok(str) => Ok(Z3_mk_numeral(self.context, str.as_ptr(), sort.sort)),
+                        Ok(str) => Ok(new_z3_term(
+                            self.context,
+                            Z3_mk_numeral(self.context, str.as_ptr(), sort.sort),
+                            false,
+                        )),
                     }
                 }
             }
-        };
-        match term {
-            Ok(t) => Ok(new_z3_term(self.context, t)),
-            Err(err) => Err(err),
+        }
+    }
+    fn record_const(&self, record_sort: &Z3Sort, field_values: &[Z3Term]) -> SMTResult<Z3Term> {
+        let mut tmp = Vec::new();
+        for value in field_values {
+            tmp.push(value);
+        }
+        self.record_const_refs(record_sort, &tmp)
+    }
+    fn record_const_refs(
+        &self,
+        record_sort: &Z3Sort,
+        field_values: &[&Z3Term],
+    ) -> SMTResult<Z3Term> {
+        let mut tmp = Vec::new();
+        for value in field_values {
+            tmp.push(value.ast);
+        }
+        match self.record_map.get(&record_sort.sort) {
+            None => Err(SMTError::new_api(
+                "record_const_refs: Non-record or unknown sort",
+            )),
+            Some(record_info) => unsafe {
+                mutex!();
+                Ok(new_z3_term(
+                    self.context,
+                    Z3_mk_app(
+                        self.context,
+                        record_info.cons_decl.decl,
+                        tmp.len() as ::std::os::raw::c_uint,
+                        tmp.as_ptr(),
+                    ),
+                    false,
+                ))
+            },
         }
     }
     fn apply_fun(
@@ -694,13 +819,29 @@ impl SMTSolver for Z3Solver {
                     args[0].ast,
                 )),
                 // Record operators
-                Op(Fn::RecordSelect(i)) => {
+                Op(Fn::RecordSelect(field)) => {
                     let sort = Z3_get_sort(self.context, args[0].ast);
-                    let selector =
-                        Z3_get_datatype_sort_constructor_accessor(self.context, sort, 0, *i);
-                    let mut tmp = Vec::new();
-                    tmp.push(args[0].ast);
-                    Ok(Z3_mk_app(self.context, selector, 1, tmp.as_ptr()))
+                    match self.record_map.get(&sort) {
+                        None => Err(SMTError::new_api(
+                            "RecordSelect applied to non-record or unknown sort",
+                        )),
+                        Some(record_info) => match record_info.field_map.get(&field.to_string()) {
+                            None => {
+                                Err(SMTError::new_api("RecordSelect applied with unknown field"))
+                            }
+                            Some(i) => {
+                                let selector = Z3_get_datatype_sort_constructor_accessor(
+                                    self.context,
+                                    sort,
+                                    0,
+                                    *i,
+                                );
+                                let mut tmp = Vec::new();
+                                tmp.push(args[0].ast);
+                                Ok(Z3_mk_app(self.context, selector, 1, tmp.as_ptr()))
+                            }
+                        },
+                    }
                 }
 
                 // Unknown operator
@@ -710,7 +851,7 @@ impl SMTSolver for Z3Solver {
             }
         };
         match term {
-            Ok(t) => Ok(new_z3_term(self.context, t)),
+            Ok(t) => Ok(new_z3_term(self.context, t, true)),
             Err(err) => Err(err),
         }
     }
@@ -771,7 +912,7 @@ impl SMTSolver for Z3Solver {
                 "get_value: can only be called after a call to check_sat that returns Sat",
             ))
         } else {
-            let term = unsafe {
+            unsafe {
                 mutex!();
                 if self.model == None {
                     let m = Z3_solver_get_model(self.context, self.solver);
@@ -786,15 +927,11 @@ impl SMTSolver for Z3Solver {
                     if !res {
                         Err(SMTError::new_internal("Unable to get value"))
                     } else {
-                        Ok(tmp)
+                        Ok(new_z3_term(self.context, tmp, false))
                     }
                 } else {
                     Err(SMTError::new_internal("Model not found"))
                 }
-            };
-            match term {
-                Ok(t) => Ok(new_z3_term(self.context, t)),
-                Err(err) => Err(err),
             }
         }
     }
