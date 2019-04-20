@@ -54,7 +54,6 @@ pub enum Fn<'a> {
 
     // Records
     RecordSelect(&'a str),
-    RecordUpdate(&'a str),
 
     // Bitvectors
     Concat,
