@@ -87,6 +87,54 @@ fn test_declare_record_sort() {
 }
 
 #[test]
+fn test_declare_record_sort_field_sort_mismatch_error() {
+    let mut smt = new_z3_solver();
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    assert_eq!(
+        smt.declare_record_sort("Record", &["hd", "tl"], &[&int_sort])
+            .unwrap_err(),
+        SMTError::new_api("declare_record_sort: fields and sorts must have same length")
+    );
+}
+
+#[test]
+fn test_declare_record_sort_duplicate_fields_error() {
+    let mut smt = new_z3_solver();
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    assert_eq!(
+        smt.declare_record_sort("Record", &["hd", "hd"], &[&int_sort, &int_sort])
+            .unwrap_err(),
+        SMTError::new_api("declare_record_sort: field names must be distinct")
+    );
+}
+
+#[test]
+fn test_declare_record_sort_duplicate_records_ok() {
+    let mut smt = new_z3_solver();
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    let _record_sort = smt
+        .declare_record_sort("Record", &["hd", "tl"], &[&int_sort, &int_sort])
+        .unwrap();
+    let _record_sort2 = smt
+        .declare_record_sort("Record2", &["hd", "tl"], &[&int_sort, &int_sort])
+        .unwrap();
+}
+
+#[test]
+fn test_declare_record_sort_duplicate_records_error() {
+    let mut smt = new_z3_solver();
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    let _record_sort = smt
+        .declare_record_sort("Record", &["hd", "tl"], &[&int_sort, &int_sort])
+        .unwrap();
+    assert_eq!(
+        smt.declare_record_sort("Record", &["hd", "tl"], &[&int_sort, &int_sort])
+            .unwrap_err(),
+        SMTError::new_api("declare_record_sort: record already exists")
+    );
+}
+
+#[test]
 fn test_declare_fun() {
     let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
@@ -1124,4 +1172,40 @@ fn test_push_pop_get_model() {
     assert_eq!(smt_result, CheckSatResult::Sat);
     let _value = smt.get_value(&x).unwrap();
     smt.pop(1).unwrap();
+}
+
+#[test]
+fn test_records() {
+    let mut smt = new_z3_solver();
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    let real_sort = smt.lookup_sort(Sorts::Real).unwrap();
+    let record_sort = smt
+        .declare_record_sort("Record", &["first", "second"], &[&int_sort, &real_sort])
+        .unwrap();
+    let r1 = smt.declare_const("r1", &record_sort).unwrap();
+    let x = smt.declare_const("x", &int_sort).unwrap();
+    let y = smt.declare_const("y", &int_sort).unwrap();
+    let zero = smt.const_from_int(0, &real_sort).unwrap();
+    let r2 = smt.record_const_refs(&record_sort, &[&y, &zero]).unwrap();
+    let r1_eq_r2 = smt.apply_fun_refs(&Op(Fn::Eq), &[&r1, &r2]).unwrap();
+    let r1_neq_r2 = smt.apply_fun_refs(&Op(Fn::Not), &[&r1_eq_r2]).unwrap();
+    smt.assert(&r1_neq_r2).unwrap();
+    let r1_first = smt
+        .apply_fun_refs(&Op(Fn::RecordSelect("first")), &[&r1])
+        .unwrap();
+    smt.assert(&smt.apply_fun_refs(&Op(Fn::Eq), &[&r1_first, &x]).unwrap())
+        .unwrap();
+    assert_eq!(smt.check_sat(), CheckSatResult::Sat);
+    let r1_second = smt
+        .apply_fun_refs(&Op(Fn::RecordSelect("second")), &[&r1])
+        .unwrap();
+    smt.assert(
+        &smt.apply_fun_refs(&Op(Fn::Eq), &[&r1_second, &zero])
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(smt.check_sat(), CheckSatResult::Sat);
+    smt.assert(&smt.apply_fun_refs(&Op(Fn::Eq), &[&x, &y]).unwrap())
+        .unwrap();
+    assert_eq!(smt.check_sat(), CheckSatResult::Unsat);
 }

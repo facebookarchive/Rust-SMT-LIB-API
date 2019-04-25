@@ -359,7 +359,7 @@ impl SMTSolver for Z3Solver {
         let mut result = Ok(0 as Z3_sort);
         if fields.len() != sorts.len() {
             result = Err(SMTError::new_api(
-                "declare_record_sort: fields and sorts must have same length.",
+                "declare_record_sort: fields and sorts must have same length",
             ));
         };
         unsafe {
@@ -426,6 +426,7 @@ impl SMTSolver for Z3Solver {
                 let mut tmp = Vec::new();
                 tmp.push(constructor);
                 let datatype = Z3_mk_datatype(self.context, record_name_sym, 1, tmp.as_mut_ptr());
+                println!("Datatype: {:?}", datatype);
                 let dummy = 0 as Z3_func_decl;
                 let mut cons_decls = [dummy];
                 let mut tester_decls = [dummy];
@@ -433,7 +434,6 @@ impl SMTSolver for Z3Solver {
                 for _sort in sorts {
                     accessors.push(dummy);
                 }
-                println!("{:?}", cons_decls[0]);
                 Z3_query_constructor(
                     self.context,
                     constructor,
@@ -442,11 +442,6 @@ impl SMTSolver for Z3Solver {
                     tester_decls.as_mut_ptr(),
                     accessors.as_mut_ptr(),
                 );
-                println!("{:?}", cons_decls[0]);
-                let ptr = Z3_get_decl_name(self.context, cons_decls[0]);
-                let ptr = Z3_get_symbol_string(self.context, ptr);
-                let cstr = CStr::from_ptr(ptr);
-                println!("{:?}", cstr);
                 let mut field_map = HashMap::new();
                 for (i, field) in fields.iter().enumerate() {
                     match field_map.entry(field.to_string()) {
@@ -462,10 +457,6 @@ impl SMTSolver for Z3Solver {
                         }
                     }
                 }
-                let record_info = RecordInfo {
-                    field_map,
-                    cons_decl: new_z3_uninterpreted_function(self.context, cons_decls[0], false),
-                };
                 match self.record_map.entry(datatype) {
                     Entry::Occupied(_) => {
                         if result.is_ok() {
@@ -475,6 +466,14 @@ impl SMTSolver for Z3Solver {
                         }
                     }
                     Entry::Vacant(v) => {
+                        let record_info = RecordInfo {
+                            field_map,
+                            cons_decl: new_z3_uninterpreted_function(
+                                self.context,
+                                cons_decls[0],
+                                false,
+                            ),
+                        };
                         v.insert(record_info);
                     }
                 };

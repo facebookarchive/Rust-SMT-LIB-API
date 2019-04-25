@@ -89,7 +89,10 @@ pub trait SMTSolver {
 
     // Create a record with field names given in fields and corresponding sorts
     // given in sorts.  The fields are used together with the RecordSelect and
-    // RecordUpdate operators to read from or update records of this sort.
+    // RecordUpdate operators to read from or update records of this sort.  An
+    // APIError results if the number of fields does not match the number of
+    // sorts, if the field names are not all distinct, or if a record of the
+    // same name has already been declared.
     fn declare_record_sort(
         &mut self,
         name: &str,
