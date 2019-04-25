@@ -10,3 +10,10 @@
 ### Patch Release
 
 * Bug fix - properly handle ref counting of Z3 solver and model objects
+
+0.2.0 (April 25, 2019)
+
+### Minor Release
+
+* Some bug fixes
+* Support for records
