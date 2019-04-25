@@ -28,6 +28,7 @@ pub enum Fn<'a> {
     Or,
     Xor,
     Eq,
+    Neq, // abbreviation for Not o Eq
     Ite,
     Distinct,
 
@@ -54,6 +55,7 @@ pub enum Fn<'a> {
 
     // Records
     RecordSelect(&'a str),
+    RecordUpdate(&'a str),
 
     // Bitvectors
     Concat,

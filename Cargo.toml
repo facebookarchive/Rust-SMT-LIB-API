@@ -2,7 +2,7 @@
 name = "rust_smt"
 version = "0.2.0"
 authors = ["Clark Barrett <cbarrett@fb.com>"]
-edition = "2019"
+edition = "2018"
 description = "A generic solver-agnostic API for interacting with SMT solvers based on the SMT-LIB standard."
 homepage = "https://github.com/facebookincubator/Rust-SMT-LIB-API"
 repository = "https://github.com/facebookincubator/Rust-SMT-LIB-API.git"

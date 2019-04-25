@@ -750,6 +750,7 @@ impl SMTSolver for Z3Solver {
                 Op(Fn::Or) => nary_fun!(Z3_mk_or),
                 Op(Fn::Xor) => binary_fun!(Z3_mk_xor),
                 Op(Fn::Eq) => binary_fun!(Z3_mk_eq),
+                Op(Fn::Neq) => binary_fun!(Z3_mk_eq),
                 Op(Fn::Ite) => trinary_fun!(Z3_mk_ite),
                 Op(Fn::Distinct) => nary_fun!(Z3_mk_distinct),
 
@@ -819,27 +820,76 @@ impl SMTSolver for Z3Solver {
                 )),
                 // Record operators
                 Op(Fn::RecordSelect(field)) => {
-                    let sort = Z3_get_sort(self.context, args[0].ast);
-                    match self.record_map.get(&sort) {
-                        None => Err(SMTError::new_api(
-                            "RecordSelect applied to non-record or unknown sort",
-                        )),
-                        Some(record_info) => match record_info.field_map.get(&field.to_string()) {
-                            None => {
-                                Err(SMTError::new_api("RecordSelect applied with unknown field"))
+                    if args.len() != 1 {
+                        Err(SMTError::new_api(
+                            "RecordSelect should have exactly one argument",
+                        ))
+                    } else {
+                        let sort = Z3_get_sort(self.context, args[0].ast);
+                        match self.record_map.get(&sort) {
+                            None => Err(SMTError::new_api(
+                                "RecordSelect applied to non-record or unknown sort",
+                            )),
+                            Some(record_info) => {
+                                match record_info.field_map.get(&field.to_string()) {
+                                    None => Err(SMTError::new_api(
+                                        "RecordSelect applied with unknown field",
+                                    )),
+                                    Some(i) => {
+                                        let selector = Z3_get_datatype_sort_constructor_accessor(
+                                            self.context,
+                                            sort,
+                                            0,
+                                            *i,
+                                        );
+                                        let mut tmp = Vec::new();
+                                        tmp.push(args[0].ast);
+                                        Ok(Z3_mk_app(self.context, selector, 1, tmp.as_ptr()))
+                                    }
+                                }
                             }
-                            Some(i) => {
-                                let selector = Z3_get_datatype_sort_constructor_accessor(
-                                    self.context,
-                                    sort,
-                                    0,
-                                    *i,
-                                );
-                                let mut tmp = Vec::new();
-                                tmp.push(args[0].ast);
-                                Ok(Z3_mk_app(self.context, selector, 1, tmp.as_ptr()))
+                        }
+                    }
+                }
+                Op(Fn::RecordUpdate(field)) => {
+                    if args.len() != 2 {
+                        Err(SMTError::new_api(
+                            "RecordUpdate should have exactly two arguments",
+                        ))
+                    } else {
+                        let sort = Z3_get_sort(self.context, args[0].ast);
+                        match self.record_map.get(&sort) {
+                            None => Err(SMTError::new_api(
+                                "First argument of RecordUpdate is non-record or unknown sort",
+                            )),
+                            Some(record_info) => {
+                                match record_info.field_map.get(&field.to_string()) {
+                                    None => Err(SMTError::new_api(
+                                        "RecordUpdate applied with unknown field",
+                                    )),
+                                    Some(i) => {
+                                        let selector = Z3_get_datatype_sort_constructor_accessor(
+                                            self.context,
+                                            sort,
+                                            0,
+                                            *i,
+                                        );
+                                        if Z3_get_sort(self.context, args[1].ast)
+                                            != Z3_get_range(self.context, selector)
+                                        {
+                                            Err(SMTError::new_api("Second argument of RecordUpdate does not have correct sort"))
+                                        } else {
+                                            Ok(Z3_datatype_update_field(
+                                                self.context,
+                                                selector,
+                                                args[0].ast,
+                                                args[1].ast,
+                                            ))
+                                        }
+                                    }
+                                }
                             }
-                        },
+                        }
                     }
                 }
 

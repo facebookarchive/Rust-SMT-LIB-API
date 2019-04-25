@@ -1037,6 +1037,66 @@ fn test_apply_fun_record_select_error() {
     );
 }
 
+#[ignore]
+#[test]
+fn test_apply_fun_record_update() {
+    let mut smt = new_z3_solver();
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    let record_sort = smt
+        .declare_record_sort("IntXInt", &["first", "second"], &[&int_sort, &int_sort])
+        .unwrap();
+    let zero = smt.const_from_int(0, &int_sort).unwrap();
+    let one = smt.const_from_int(1, &int_sort).unwrap();
+    let r = smt
+        .record_const_refs(&record_sort, &[&zero, &zero])
+        .unwrap();
+    assert_eq!(
+        smt.apply_fun_refs(&Op(Fn::RecordUpdate("first")), &[&r, &one])
+            .unwrap()
+            .to_string()
+            .unwrap(),
+        "((_ update-field (first (IntXInt) Int)) (IntXInt_cons 0 0) 1)"
+    );
+    assert_eq!(
+        smt.apply_fun_refs(&Op(Fn::RecordUpdate("second")), &[&r, &one])
+            .unwrap()
+            .to_string()
+            .unwrap(),
+        "((_ update-field (second (IntXInt) Int)) (IntXInt_cons 0 0) 1)"
+    );
+}
+
+#[test]
+fn test_apply_fun_record_update_error() {
+    let mut smt = new_z3_solver();
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    let record_sort = smt
+        .declare_record_sort("IntXInt", &["first", "second"], &[&int_sort, &int_sort])
+        .unwrap();
+    let r = smt.declare_const("r", &record_sort).unwrap();
+    assert_eq!(
+        smt.apply_fun_refs(&Op(Fn::RecordUpdate("first")), &[&r])
+            .unwrap_err(),
+        SMTError::new_api("RecordUpdate should have exactly two arguments")
+    );
+    let x = smt.declare_const("x", &int_sort).unwrap();
+    assert_eq!(
+        smt.apply_fun_refs(&Op(Fn::RecordUpdate("first")), &[&x, &x])
+            .unwrap_err(),
+        SMTError::new_api("First argument of RecordUpdate is non-record or unknown sort")
+    );
+    assert_eq!(
+        smt.apply_fun_refs(&Op(Fn::RecordUpdate("third")), &[&r, &x])
+            .unwrap_err(),
+        SMTError::new_api("RecordUpdate applied with unknown field")
+    );
+    assert_eq!(
+        smt.apply_fun_refs(&Op(Fn::RecordUpdate("first")), &[&r, &r])
+            .unwrap_err(),
+        SMTError::new_api("Second argument of RecordUpdate does not have correct sort")
+    );
+}
+
 #[test]
 fn test_level() {
     let smt = new_z3_solver();
@@ -1174,6 +1234,7 @@ fn test_push_pop_get_model() {
     smt.pop(1).unwrap();
 }
 
+#[ignore]
 #[test]
 fn test_records() {
     let mut smt = new_z3_solver();
@@ -1184,18 +1245,38 @@ fn test_records() {
         .unwrap();
     let r1 = smt.declare_const("r1", &record_sort).unwrap();
     let x = smt.declare_const("x", &int_sort).unwrap();
-    let y = smt.declare_const("y", &int_sort).unwrap();
-    let zero = smt.const_from_int(0, &real_sort).unwrap();
-    let r2 = smt.record_const_refs(&record_sort, &[&y, &zero]).unwrap();
-    let r1_eq_r2 = smt.apply_fun_refs(&Op(Fn::Eq), &[&r1, &r2]).unwrap();
-    let r1_neq_r2 = smt.apply_fun_refs(&Op(Fn::Not), &[&r1_eq_r2]).unwrap();
-    smt.assert(&r1_neq_r2).unwrap();
     let r1_first = smt
         .apply_fun_refs(&Op(Fn::RecordSelect("first")), &[&r1])
         .unwrap();
-    smt.assert(&smt.apply_fun_refs(&Op(Fn::Eq), &[&r1_first, &x]).unwrap())
+
+    // r1.first != x
+    smt.assert(
+        &smt.apply_fun_refs(&Op(Fn::Distinct), &[&r1_first, &x])
+            .unwrap(),
+    )
+    .unwrap();
+    let r1x = smt
+        .apply_fun_refs(&Op(Fn::RecordUpdate("first")), &[&r1, &x])
         .unwrap();
+
+    // check r1 != r1 WITH .first := x
+    smt.push(1).unwrap();
+    smt.assert(&smt.apply_fun_refs(&Op(Fn::Eq), &[&r1, &r1x]).unwrap())
+        .unwrap();
+    assert_eq!(smt.check_sat(), CheckSatResult::Unsat);
+    smt.pop(1).unwrap();
+
+    // r2 = { first: y, second: 0 }
+    let y = smt.declare_const("y", &int_sort).unwrap();
+    let zero = smt.const_from_int(0, &real_sort).unwrap();
+    let r2 = smt.record_const_refs(&record_sort, &[&y, &zero]).unwrap();
+
+    // check r2 != r1 WITH .first := x is satisfiable
+    let r1x_neq_r2 = smt.apply_fun_refs(&Op(Fn::Distinct), &[&r1x, &r2]).unwrap();
+    smt.assert(&r1x_neq_r2).unwrap();
     assert_eq!(smt.check_sat(), CheckSatResult::Sat);
+
+    // r1.second = 0
     let r1_second = smt
         .apply_fun_refs(&Op(Fn::RecordSelect("second")), &[&r1])
         .unwrap();
@@ -1204,8 +1285,14 @@ fn test_records() {
             .unwrap(),
     )
     .unwrap();
+
+    // check r2 != r1 WITH .first := x is still satisfiable
     assert_eq!(smt.check_sat(), CheckSatResult::Sat);
+
+    // x = y
     smt.assert(&smt.apply_fun_refs(&Op(Fn::Eq), &[&x, &y]).unwrap())
         .unwrap();
+
+    // Now r2 != r1 WITH .first := x should be unsatisfiable
     assert_eq!(smt.check_sat(), CheckSatResult::Unsat);
 }
