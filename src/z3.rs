@@ -426,7 +426,6 @@ impl SMTSolver for Z3Solver {
                 let mut tmp = Vec::new();
                 tmp.push(constructor);
                 let datatype = Z3_mk_datatype(self.context, record_name_sym, 1, tmp.as_mut_ptr());
-                println!("Datatype: {:?}", datatype);
                 let dummy = 0 as Z3_func_decl;
                 let mut cons_decls = [dummy];
                 let mut tester_decls = [dummy];

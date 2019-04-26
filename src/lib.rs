@@ -30,7 +30,7 @@ pub enum CheckSatResult {
 }
 
 // An abstract data type for SMT sorts.
-pub trait Sort: std::fmt::Debug + std::clone::Clone + Sized {
+pub trait Sort: Clone + std::fmt::Debug + Eq + std::hash::Hash + Sized {
     // Get a string representing the SMT-LIB name for the Sort.  The only
     // possible error is InternalError.
     fn to_string(&self) -> SMTResult<String>;
