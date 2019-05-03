@@ -15,8 +15,8 @@ before_script:
 # install z3
 - wget -O z3.zip https://github.com/Z3Prover/bin/blob/10fafc192673e9ec80ae8abff38bcc1e1a3a0a9c/nightly/z3-4.8.5.606754c09a68-x64-ubuntu-14.04.zip?raw=true
 - unzip z3
-- mv z3-4.8.5.606754c09a68-x64-ubuntu-14.04/include/* /usr/include/
-- mv z3-4.8.5.606754c09a68-x64-ubuntu-14.04/bin/libz3.* /usr/lib/x86_64-linux-gnu/
+- sudo mv z3-4.8.5.606754c09a68-x64-ubuntu-14.04/include/* /usr/include/
+- sudo mv z3-4.8.5.606754c09a68-x64-ubuntu-14.04/bin/libz3.* /usr/lib/x86_64-linux-gnu/
 # install formatter
 - rustup component add rustfmt-preview
 # install linter
