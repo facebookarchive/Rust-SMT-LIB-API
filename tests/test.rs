@@ -1037,7 +1037,6 @@ fn test_apply_fun_record_select_error() {
     );
 }
 
-#[ignore]
 #[test]
 fn test_apply_fun_record_update() {
     let mut smt = new_z3_solver();
@@ -1234,7 +1233,6 @@ fn test_push_pop_get_model() {
     smt.pop(1).unwrap();
 }
 
-#[ignore]
 #[test]
 fn test_records() {
     let mut smt = new_z3_solver();

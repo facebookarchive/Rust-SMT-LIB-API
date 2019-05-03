@@ -10,8 +10,8 @@ for more information on SMT-LIB and Z3.  See tests/test.rs for
 examples of how to use the interface.
 
 ## Installing z3
-* For linux systems with apt: sudo apt install libz3-dev
-* For all other systems, follow the install instructions on the Z3 website (see below)
+* Rust-SMT-LIB-API requires the latest nightly build of Z3
+* Follow the install instructions on the Z3 website (see below)
 
 ## Building
 * Download or clone Rust-SMT-LIB-API
