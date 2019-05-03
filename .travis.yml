@@ -6,7 +6,6 @@ addons:
   apt:
     packages:
     - libssl-dev
-    - libz3-dev
 language: rust
 rust:
 - nightly-2019-03-23
