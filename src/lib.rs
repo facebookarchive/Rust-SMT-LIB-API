@@ -75,6 +75,9 @@ pub trait SMTSolver {
     // Sorts                                                                 //
     ///////////////////////////////////////////////////////////////////////////
 
+    // Get the sort of a term.
+    fn get_sort(&self, t: &Self::T) -> SMTResult<Self::S>;
+    
     // Declare a new uninterpreted sort with the given name.  Only
     // InternalError errors are possible.
     fn declare_sort(&self, name: &str) -> SMTResult<Self::S>;

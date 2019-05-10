@@ -291,6 +291,13 @@ impl SMTSolver for Z3Solver {
             }
         }
     }
+    fn get_sort(&self, t: &Z3Term) -> SMTResult<Z3Sort>  {
+        unsafe {
+            mutex!();
+            let z3sort = Z3_get_sort(self.context, t.ast);
+            Ok(new_z3_sort(self.context, z3sort, false))
+        }
+    }
     fn declare_sort(&self, name: &str) -> SMTResult<Z3Sort> {
         unsafe {
             match CString::new(name) {
