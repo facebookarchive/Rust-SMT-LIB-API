@@ -17,8 +17,10 @@ fn test_create_solver() {
 fn test_get_sort() {
     let smt = new_z3_solver();
     let bool_sort = smt.lookup_sort(Sorts::Bool).unwrap();
-    assert_eq!(bool_sort,
-               smt.get_sort(&smt.lookup_const(Fn::True).unwrap()).unwrap());
+    assert_eq!(
+        bool_sort,
+        smt.get_sort(&smt.lookup_const(Fn::True).unwrap()).unwrap()
+    );
 }
 
 #[test]
