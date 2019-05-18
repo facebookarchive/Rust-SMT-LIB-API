@@ -494,6 +494,9 @@ impl SMTSolver for Z3Solver {
             Ok(sort) => Ok(new_z3_sort(self.context, sort, true)),
         }
     }
+    fn is_record_sort(&self, sort: &Z3Sort) -> bool {
+        self.record_map.get(&sort.sort).is_some()
+    }
     fn declare_fun(
         &self,
         name: &str,

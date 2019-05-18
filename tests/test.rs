@@ -145,6 +145,17 @@ fn test_declare_record_sort_duplicate_records_error() {
 }
 
 #[test]
+fn test_is_record() {
+    let mut smt = new_z3_solver();
+    let int_sort = smt.lookup_sort(Sorts::Int).unwrap();
+    let record_sort = smt
+        .declare_record_sort("Record", &["hd", "tl"], &[&int_sort, &int_sort])
+        .unwrap();
+    assert_eq!(smt.is_record_sort(&record_sort), true);
+    assert_eq!(smt.is_record_sort(&int_sort), false);
+}
+
+#[test]
 fn test_declare_fun() {
     let smt = new_z3_solver();
     let int_sort = smt.lookup_sort(Sorts::Int).unwrap();

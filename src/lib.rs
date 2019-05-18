@@ -103,6 +103,9 @@ pub trait SMTSolver {
         sorts: &[&Self::S],
     ) -> SMTResult<Self::S>;
 
+    // Return true iff the sort is a record sort.
+    fn is_record_sort(&self, sort: &Self::S) -> bool;
+
     ///////////////////////////////////////////////////////////////////////////
     // Functions                                                             //
     ///////////////////////////////////////////////////////////////////////////
