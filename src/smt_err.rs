@@ -20,7 +20,7 @@ impl SMTError {
         APIError(msg.to_string())
     }
 
-    // An error resulting from an usupported feature.
+    // An error resulting from an unsupported feature.
     pub fn new_unsupported(msg: &str) -> SMTError {
         UnsupportedError(msg.to_string())
     }
